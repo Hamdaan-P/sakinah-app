@@ -1,0 +1,456 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
+/* Amiri Quran: dedicated Uthmani font with glyphs for waqf / stop / end-of-ayah marks */
+@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap');
+@import url('https://fonts.cdnfonts.com/css/kfgqpc-hafs-uthmanic-script');
+
+/* Self-hosted Quran scripts (also injected at runtime by the Mushaf reader).
+   Declared globally so the reading page renders IndoPak / Uthmani-Hafs text
+   without missing-glyph "boxes". font-display:block avoids a tofu flash. */
+@font-face {
+  font-family: 'UthmanicHafs';
+  src: url('/fonts/uthmanic-hafs.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'IndoPakNastaleeq';
+  src: url('/fonts/indopak-nastaleeq.woff2') format('woff2');
+  font-display: block;
+}
+
+/* Custom theme variables — Barakah Labs palette (deep blue-black + warm gold + ink cream) */
+@theme {
+  /* Gold colors */
+  --color-primary-gold: #D4A853;
+  --color-deep-gold: #B8893A;
+  --color-accent-gold: #E8C97A;
+  --color-antique-gold: #C9A85C;
+  --color-rose-gold: #C97A6B;
+
+  /* Backgrounds — Barakah depth hierarchy (near-black → blue-black) */
+  --color-background-primary: #0A0E16;
+  --color-background-secondary: #0F141F;
+  --color-background-card: #10151F;
+  --color-background-elevated: #161D2C;
+  --color-background-modal: #0D1119;
+  --color-background-dropdown: #161D2C;
+  --color-background-surface: #0F141F;
+
+  /* Text colors — Barakah ink scale */
+  --color-text-primary: #F5E8C7;
+  --color-text-secondary: #C9C0A8;
+  --color-text-tertiary: #7A7363;
+  --color-text-light: #5C5749;
+  --color-text-disabled: #4A4639;
+  --color-text-heading: #E8C97A;
+
+  /* Borders — Barakah "rule" tones */
+  --color-border: rgba(245, 232, 199, 0.08);
+  --color-border-strong: rgba(245, 232, 199, 0.16);
+  --color-border-subtle: rgba(245, 232, 199, 0.04);
+  --color-divider: rgba(245, 232, 199, 0.08);
+
+  /* Semantic colors */
+  --color-error: #EF4444;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+
+  /* Greys — Barakah dark scale */
+  --color-grey-400: #0D1119;
+  --color-grey-500: #0A0E16;
+  --color-grey-600: #080B11;
+
+  /* Font families — Barakah typography */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'DM Sans', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Shadows — Barakah gold rgb 212,168,83 */
+  --shadow-gold: 0 4px 6px -1px rgba(212,168,83, 0.3), 0 2px 4px -1px rgba(212,168,83, 0.2);
+  --shadow-gold-lg: 0 10px 15px -3px rgba(212,168,83, 0.3), 0 4px 6px -2px rgba(212,168,83, 0.2);
+}
+
+/* Base styles */
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-background-primary);
+  /* dvh keeps the layout stable when iOS Safari shows/hides the URL bar */
+  min-height: 100dvh;
+  /* iOS rubber-band scroll fix inside Capacitor webview */
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Hard-cap horizontal width — small Samsung devices (S10, A10, A30) are
+     360 CSS px wide and any element wider than that creates horizontal
+     overflow that pushes content beyond the screen. `clip` (not `hidden`)
+     so we don't accidentally promote overflow-y into a scroll container,
+     which would give us two stacked vertical scrollbars (html + body)
+     and breaks touch-scroll bubbling on iOS/Android WebView. */
+  max-width: 100vw;
+  overflow-x: clip;
+}
+body {
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  position: relative;
+  z-index: 0;
+  /* Honour notch / Dynamic Island / Samsung punch-hole on every page.
+   * Capacitor StatusBar plugin sets these CSS env vars on Android too.
+   * Use max() so we still get a baseline 12px on devices without insets
+   * (so headers don't sit flush against the very top edge). */
+  padding-top: max(env(safe-area-inset-top), 0px);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+}
+#root {
+  min-height: 100dvh;
+  /* Prevent any descendant from forcing horizontal scroll on narrow phones. */
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Catch-all guard against fixed pixel widths on inner elements that might
+ * exceed 360px viewport on Samsung A10 / older Galaxies. Anything that
+ * MUST overflow (carousels, tables, mushaf pages) should opt back in with
+ * .allow-x-overflow on a parent. SVGs intentionally excluded — they have
+ * their own viewBox-based sizing and would distort if forced auto-height. */
+img, video, iframe, canvas {
+  max-width: 100%;
+  height: auto;
+}
+.allow-x-overflow {
+  overflow-x: auto;
+  max-width: none;
+}
+
+/* Safe-area utilities — use on fixed headers, bottom nav, etc. */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pl-safe { padding-left: env(safe-area-inset-left); }
+.pr-safe { padding-right: env(safe-area-inset-right); }
+.mt-safe { margin-top: env(safe-area-inset-top); }
+.mb-safe { margin-bottom: env(safe-area-inset-bottom); }
+.h-screen-dvh { height: 100dvh; }
+.min-h-screen-dvh { min-height: 100dvh; }
+/* Opt-out for screens that need full bleed (camera, splash, video) */
+.no-safe-area { padding: 0 !important; }
+
+/* Disable text size auto-adjust on iOS landscape */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Fluid root font — replaces the prior fixed 16px + two max-width media
+     queries (380px → 14px, 340px → 13px). The breakpointed version solved
+     "tiny Samsungs feel cramped" but created the opposite problem on wider
+     iPhones (Pro / Pro Max, 393–430 CSS px): the rem-based layout looked
+     floaty / zoomed-out because the viewport got wider while the root font
+     stayed pinned at 16px.
+
+     The clamp() below scales root font linearly with viewport width so
+     spacing density stays consistent across the whole mobile range:
+       320 px (iPhone SE 1st gen) → 13.0 px  (clamped)
+       340 px                     → 13.0 px  (clamped)
+       360 px (Samsung A10)       → 14.0 px  (matches old behaviour)
+       375 px (iPhone 13 mini)    → 14.75 px
+       390 px (iPhone 14)         → 15.5 px
+       412 px (Pixel 5)           → 16.6 px
+       430 px (iPhone 15 Pro Max) → 17.0 px  (clamped — was 16 px before)
+       480 px+ (tablets, desktop) → 17.0 px  (clamped)
+
+     Conservative 17 px cap so existing rem-sized components on tablet /
+     desktop don't shift noticeably. Bump the cap if a future review
+     wants iPad to breathe more. */
+  font-size: clamp(13px, calc(5vw - 4px), 17px);
+}
+
+/* Minimum tap target: 40px even on the smallest screens. Phosphor icon
+   buttons in our codebase often size to icon dimensions (12-16px) which
+   on a Samsung A10 with chunky thumbs is hard to hit. */
+button, [role="button"], a {
+  min-height: 32px; /* baseline; explicit sizes still win */
+}
+@media (pointer: coarse) {
+  /* Touch-only devices — bump tap targets a bit */
+  button, [role="button"] {
+    touch-action: manipulation; /* removes 300ms double-tap delay */
+  }
+}
+
+/* Prevent unwanted long-press selection in webview */
+button, a, [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Global headings — Barakah serif, static warm-gold (no shimmer).
+   Per-page components are free to override color/style. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  color: var(--color-text-heading);
+  letter-spacing: 0.2px;
+}
+
+/* Ambient page glow — soft gold + emerald radials (replaces the prior
+   gold-dot starfield). Lives behind the React tree, pointer-events off. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(ellipse 60% 50% at 50% 30%, rgba(212,168,83, 0.05), transparent 70%),
+    radial-gradient(ellipse 70% 55% at 50% 80%, rgba(42, 157, 111, 0.035), transparent 75%);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--color-background-elevated);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-grey-600);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-grey-500);
+}
+
+/* Utility classes */
+.text-gradient-gold {
+  background: linear-gradient(90deg, var(--color-primary-gold), var(--color-accent-gold), var(--color-deep-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Gold shimmer text — opt-in utility; uses Barakah gold + ink */
+.text-gold-shimmer {
+  background: linear-gradient(110deg, #B8893A 0%, #F5E8C7 35%, #B8893A 70%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gold-shimmer 3.5s linear infinite;
+}
+
+.bk-raya-orb-pulse { animation: bk-raya-orb-pulse 3s ease-in-out infinite; }
+@keyframes bk-raya-orb-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes gold-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.border-gradient-gold {
+  border-image: linear-gradient(90deg, #D4A853, #E8C97A, #B8893A) 1;
+}
+
+/* ----- Mushaf reader ----------------------------------------------------- */
+
+/* Vertical shimmer for the right-edge surah-progress indicator. Painted
+ * with a moving highlight stripe so it feels alive without being noisy. */
+@keyframes mushaf-edge-shimmer {
+  0% { background-position: 50% 200%; }
+  100% { background-position: 50% -200%; }
+}
+.mushaf-shimmer {
+  background-size: 100% 200%;
+  animation: mushaf-edge-shimmer 3.2s linear infinite;
+}
+
+/* Soft gold pulse used on the currently-playing ayah inside the page. */
+@keyframes mushaf-ayah-glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212,168,83, 0.0); }
+  50%      { box-shadow: 0 0 14px 2px rgba(212,168,83, 0.45); }
+}
+.mushaf-ayah-glow {
+  animation: mushaf-ayah-glow-pulse 1.6s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+/* Slowly rotating Islamic geometry watermark (used by IslamicGeometryBackground). */
+@keyframes zp-geom-rotate-kf {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.zp-geom-rotate {
+  animation: zp-geom-rotate-kf 90s linear infinite;
+  transform-origin: 50% 50%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .zp-geom-rotate { animation: none; }
+}
+
+/* Arabic / Quranic font.
+ * Primary: Amiri Quran (Google Fonts, reliable) — a dedicated Uthmani
+ * variant that renders every waqf / stop / end-of-ayah / verse-number
+ * glyph correctly. Previously we tried KFGQPC Hafs from cdnfonts.com
+ * which frequently failed to load and left us on plain Amiri (which
+ * lacks many Tajweed marks and shows them as hollow circles). */
+.font-arabic {
+  font-family: 'Amiri Quran', 'KFGQPC HAFS Uthmanic Script', 'Amiri', 'Traditional Arabic', 'Noto Naskh Arabic', serif;
+  font-feature-settings: "liga" 1, "calt" 1;
+  font-variant-numeric: normal;
+}
+
+/* Hadith Arabic font — plain Naskh, NOT Uthmanic Quran script */
+.font-hadith-arabic {
+  font-family: 'Amiri', 'Traditional Arabic', 'Noto Naskh Arabic', serif;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Select dropdown dark theme */
+select option {
+  background-color: #0A0E16;
+  color: #F5E8C7;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ─── Gradient Utilities — Barakah palette
+ * Class names kept (no JSX changes needed); values remapped onto the
+ * deep-blue-black + warm-gold + ink palette. Anything previously "teal"
+ * now reads as deep blue-black or emerald-tinged. */
+.gradient-premium-teal {
+  background: linear-gradient(to right, #06080D, #0F141F);
+}
+.gradient-rich-teal {
+  background: linear-gradient(135deg, #06080D, #0A0E16, #10151F);
+}
+.gradient-premium-gold {
+  background: linear-gradient(to right, #B8893A, #D4A853);
+}
+.gradient-rich-gold {
+  background: linear-gradient(135deg, #B8893A 0%, #D4A853 50%, #E8C97A 100%);
+}
+.gradient-gold-shimmer-bg {
+  background: linear-gradient(to right, #D4A853, #F5E8C7, #D4A853);
+}
+.gradient-gold-subtle {
+  background: linear-gradient(135deg, rgba(212,168,83, 0.18), rgba(232, 201, 122, 0.08));
+}
+.gradient-teal-to-gold {
+  background: linear-gradient(to bottom, #0A0E16 0%, #10151F 60%, rgba(212,168,83, 0.12) 100%);
+}
+.gradient-elegant-card {
+  background: linear-gradient(135deg, #10151F 0%, #0F141F 50%, #0A0E16 100%);
+}
+.gradient-background-dark {
+  background: linear-gradient(to bottom, #06080D, #0A0E16);
+}
+.gradient-surface-dark {
+  background: linear-gradient(135deg, #10151F, #0F141F);
+}
+.gradient-glass-gold {
+  background: linear-gradient(135deg, rgba(212,168,83, 0.15), rgba(245, 232, 199, 0.04));
+}
+.gradient-glass-teal {
+  background: linear-gradient(135deg, rgba(15, 20, 31, 0.5), rgba(10, 14, 22, 0.3));
+}
+.gradient-glass-premium {
+  background: linear-gradient(135deg, rgba(212,168,83, 0.1) 0%, rgba(79, 184, 146, 0.05) 50%, rgba(232, 201, 122, 0.08) 100%);
+}
+.gradient-overlay-top {
+  background: linear-gradient(to bottom, rgba(6, 8, 13, 0.9), transparent);
+}
+.gradient-overlay-bottom {
+  background: linear-gradient(to top, rgba(6, 8, 13, 0.9), transparent);
+}
+.gradient-scrim {
+  background: linear-gradient(to bottom, rgba(6, 8, 13, 0.5), rgba(6, 8, 13, 0.7));
+}
+
+/* Status gradients */
+.gradient-success { background: linear-gradient(135deg, #10B981, #34D399); }
+.gradient-error { background: linear-gradient(135deg, #EF4444, #F87171); }
+.gradient-warning { background: linear-gradient(135deg, #F59E0B, #FBBF24); }
+.gradient-info { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
+
+/* Font display utility */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Reduced-motion accessibility (WCAG 2.3.3, also matches OS-level toggle).
+ * Older users in particular benefit — vestibular sensitivity is more common
+ * in the 40+ audience we're targeting. Honors the user's OS preference and
+ * collapses animations to near-instant so transitions still occur (for
+ * state-change feedback) but no longer move, parallax, or pulse.
+ * ─────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Kill the pulsing dot indicators and any infinite-loop ornament motion. */
+  .animate-pulse,
+  .animate-spin,
+  .animate-bounce,
+  .animate-ping {
+    animation: none !important;
+  }
+}

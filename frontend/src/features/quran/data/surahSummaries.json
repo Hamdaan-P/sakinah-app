@@ -1,0 +1,149 @@
+{
+  "_meta": {
+    "description": "Curated, scholar-grounded surah summaries. Source attributions follow Athari/Salafi-compatible classical works (Ibn Kathir introductions, Tafsir as-Sa'di, At-Tabari) without sectarian framing. Surahs not listed here fall back to a tafsir-RAG retrieval at runtime.",
+    "version": 1,
+    "primary_sources": [
+      {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"},
+      {"book": "Tafsir as-Sa'di", "author": "Abdur-Rahman al-Sa'di"}
+    ]
+  },
+  "summaries": {
+    "1": {
+      "surah_id": 1,
+      "name_arabic": "الفاتحة",
+      "name_english": "Al-Fatihah",
+      "revelation_place": "Makki",
+      "ayah_count": 7,
+      "theme": "The Opening — a complete supplication asking Allah for guidance to the straight path.",
+      "key_topics": ["Praise of Allah", "Tawhid al-Rububiyyah", "Tawhid al-Uluhiyyah", "Day of Judgment", "Seeking guidance"],
+      "context": "Recited in every unit of every prayer. Called Umm al-Kitab (the Mother of the Book) and Al-Sab' al-Mathani (the seven oft-repeated). Encapsulates the entire message of the Quran: knowing Allah, worshipping Him alone, and asking for guidance.",
+      "sources": [
+        {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"},
+        {"book": "Tafsir as-Sa'di", "author": "Abdur-Rahman al-Sa'di"}
+      ]
+    },
+    "2": {
+      "surah_id": 2,
+      "name_arabic": "البقرة",
+      "name_english": "Al-Baqarah",
+      "revelation_place": "Madani",
+      "ayah_count": 286,
+      "theme": "The longest surah — a comprehensive constitution covering belief, worship, law, history, and warning.",
+      "key_topics": ["The three groups: believers, disbelievers, hypocrites", "Story of Adam", "Children of Israel", "Qiblah change", "Fasting", "Hajj", "Marriage and divorce", "Riba (usury)", "Ayat al-Kursi"],
+      "context": "Revealed over several years in Madinah. Establishes the believing community's identity, legal framework, and posture toward earlier scripture-holders. Ayah 255 (Al-Kursi) is the greatest verse in the Quran per Sahih Muslim 810.",
+      "sources": [
+        {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"},
+        {"book": "Tafsir as-Sa'di", "author": "Abdur-Rahman al-Sa'di"}
+      ]
+    },
+    "3": {
+      "surah_id": 3,
+      "name_arabic": "آل عمران",
+      "name_english": "Ali 'Imran",
+      "revelation_place": "Madani",
+      "ayah_count": 200,
+      "theme": "Family of 'Imran — establishing the truth of tawhid against the People of the Book.",
+      "key_topics": ["Allah's oneness", "Story of Maryam and 'Isa (peace be upon them)", "Battle of Uhud lessons", "Dialogue with Christians", "Hajj obligation", "Steadfastness in trial"],
+      "context": "Madani, paired with Al-Baqarah in the Prophet's words as the two 'Zahrawan' (the two luminous ones). Addresses Christian theology directly and draws lessons from the setback at Uhud.",
+      "sources": [
+        {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"},
+        {"book": "Tafsir at-Tabari", "author": "Muhammad ibn Jarir at-Tabari"}
+      ]
+    },
+    "18": {
+      "surah_id": 18,
+      "name_arabic": "الكهف",
+      "name_english": "Al-Kahf",
+      "revelation_place": "Makki",
+      "ayah_count": 110,
+      "theme": "Four trials — faith (the cave), wealth (the two gardens), knowledge (Musa and Khidr), and power (Dhul-Qarnayn).",
+      "key_topics": ["The People of the Cave", "The two gardens", "Musa and Khidr", "Dhul-Qarnayn", "Protection from Dajjal"],
+      "context": "Reciting the first or last ten verses on Friday is reported to be a protection against the trial of the Dajjal (Sahih Muslim 809). The four narratives systematically address the four worldly trials.",
+      "sources": [
+        {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"},
+        {"book": "Tafsir as-Sa'di", "author": "Abdur-Rahman al-Sa'di"}
+      ]
+    },
+    "36": {
+      "surah_id": 36,
+      "name_arabic": "يس",
+      "name_english": "Ya-Sin",
+      "revelation_place": "Makki",
+      "ayah_count": 83,
+      "theme": "The heart of the Quran — affirming prophethood, resurrection, and Allah's signs in creation.",
+      "key_topics": ["Truthfulness of the Messenger", "Parable of the town", "Signs in creation", "Resurrection", "Final reckoning"],
+      "context": "Called Qalb al-Quran (the heart of the Quran) in some narrations. Densely affirms the three Makki themes: tawhid, prophethood, and the hereafter.",
+      "sources": [
+        {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"}
+      ]
+    },
+    "55": {
+      "surah_id": 55,
+      "name_arabic": "الرحمن",
+      "name_english": "Ar-Rahman",
+      "revelation_place": "Madani",
+      "ayah_count": 78,
+      "theme": "The Most Merciful — cataloguing Allah's favors on jinn and humans with the recurring refrain.",
+      "key_topics": ["The Quran as mercy", "Creation of humans and jinn", "Signs in nature", "Paradise (two gardens, and two more below them)", "Allah's bounty"],
+      "context": "Known as 'Arus al-Quran (the bride of the Quran). The refrain 'Which of the favors of your Lord will you deny?' appears 31 times — a structural call to gratitude.",
+      "sources": [
+        {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"},
+        {"book": "Tafsir as-Sa'di", "author": "Abdur-Rahman al-Sa'di"}
+      ]
+    },
+    "67": {
+      "surah_id": 67,
+      "name_arabic": "الملك",
+      "name_english": "Al-Mulk",
+      "revelation_place": "Makki",
+      "ayah_count": 30,
+      "theme": "The Dominion — Allah's absolute sovereignty and the certainty of accountability.",
+      "key_topics": ["Allah's dominion", "Purpose of life and death", "Signs in the heavens", "Warning of the Fire", "Provision and gratitude"],
+      "context": "Reciting it nightly is reported to intercede for its reciter (Sunan Abu Dawud 1400, hasan). Anchors a Makki worldview: this life is a test, sovereignty belongs to Allah alone.",
+      "sources": [
+        {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"}
+      ]
+    },
+    "112": {
+      "surah_id": 112,
+      "name_arabic": "الإخلاص",
+      "name_english": "Al-Ikhlas",
+      "revelation_place": "Makki",
+      "ayah_count": 4,
+      "theme": "Sincerity — the purest statement of Allah's oneness, free of any association.",
+      "key_topics": ["Tawhid al-Asma wa-l-Sifat", "Negation of partnership", "Allah's absolute independence"],
+      "context": "Equivalent to a third of the Quran in reward (Sahih al-Bukhari 5013). The most concise refutation of polytheism, anthropomorphism, and incarnation theology.",
+      "sources": [
+        {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"},
+        {"book": "Tafsir as-Sa'di", "author": "Abdur-Rahman al-Sa'di"}
+      ]
+    },
+    "113": {
+      "surah_id": 113,
+      "name_arabic": "الفلق",
+      "name_english": "Al-Falaq",
+      "revelation_place": "Makki",
+      "ayah_count": 5,
+      "theme": "Seeking refuge in Allah from external harm — created evil, darkness, sorcery, envy.",
+      "key_topics": ["Seeking refuge (isti'adhah)", "Sources of external harm", "Sorcery", "Envy (hasad)"],
+      "context": "One of the two Mu'awwidhatayn (refuge-seeking surahs). Recited daily in morning and evening adhkar and after every prayer.",
+      "sources": [
+        {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"}
+      ]
+    },
+    "114": {
+      "surah_id": 114,
+      "name_arabic": "الناس",
+      "name_english": "An-Nas",
+      "revelation_place": "Makki",
+      "ayah_count": 6,
+      "theme": "Seeking refuge in Allah from internal harm — the whispering of devils, human or jinn.",
+      "key_topics": ["Seeking refuge", "Whispering (waswasah)", "The slinking whisperer", "Jinn and human devils"],
+      "context": "The closing surah of the Quran. Paired with Al-Falaq as the Mu'awwidhatayn: Al-Falaq protects from external harm, An-Nas from internal whispering.",
+      "sources": [
+        {"book": "Tafsir Ibn Kathir", "author": "Ibn Kathir"},
+        {"book": "Tafsir as-Sa'di", "author": "Abdur-Rahman al-Sa'di"}
+      ]
+    }
+  }
+}

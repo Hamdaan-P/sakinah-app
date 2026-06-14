@@ -1,0 +1,38 @@
+{
+  "title": "Chat with Raya on WhatsApp",
+  "blurb": "Link your Zaryah Plus account to WhatsApp so Raya can answer you wherever you are — same Raya, same memory, no app required.",
+  "features": {
+    "islamic": "Sourced answers to Quran and hadith questions.",
+    "reminders": "Reminders that fire on time, in your timezone.",
+    "voice": "Voice notes welcome — Raya listens and replies.",
+    "barka": "Your gratitude (Barka Labs) stays in sync."
+  },
+  "cta": {
+    "idle": "Chat with Raya on WhatsApp",
+    "preparing": "Preparing link…",
+    "waiting": "Waiting for WhatsApp…"
+  },
+  "waiting": {
+    "primary": "WhatsApp should have opened with a pre-filled message — just tap send to finish linking.",
+    "hint_prefix": "If WhatsApp didn't open,",
+    "hint_link": "tap here",
+    "hint_suffix": "to open it manually."
+  },
+  "linked": {
+    "heading": "WhatsApp linked",
+    "subtitle": "Raya is connected to your WhatsApp at {{phone}}.",
+    "since": "Linked on {{date}}.",
+    "unlink_cta": "Unlink WhatsApp"
+  },
+  "unlink_modal": {
+    "heading": "Unlink WhatsApp?",
+    "body": "Raya will stop responding on WhatsApp until you link again. Your conversation history stays on your account.",
+    "cancel": "Cancel",
+    "confirm": "Yes, unlink",
+    "confirming": "Unlinking…",
+    "error": "Couldn't unlink — please try again."
+  },
+  "errors": {
+    "mint_failed": "Couldn't prepare the link — please try again in a moment."
+  }
+}

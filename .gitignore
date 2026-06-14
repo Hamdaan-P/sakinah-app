@@ -1,0 +1,14 @@
+# Secrets
+sakinah-backend/serviceAccountKey.json
+frontend/.env.local
+frontend/.env
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build outputs
+frontend/dist/
+__pycache__/
+*.pyc
+.env

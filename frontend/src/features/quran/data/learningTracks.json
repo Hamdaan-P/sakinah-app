@@ -1,0 +1,258 @@
+{
+  "_meta": {
+    "description": "Curated scholar-led Quran learning tracks. Each track is a sequence of stages a learner completes at their own pace. Stages reference verified Quran verses, hadith, and tafsir/book sources; no AI-generated content. Sources align with Athari/Salafi-compatible classical works (per PDF Section 8) without sectarian framing.",
+    "version": 1
+  },
+  "tracks": [
+    {
+      "id": "foundations-of-tawhid",
+      "title": "Foundations of Tawhid",
+      "subtitle": "The bedrock of belief through Quran and the Prophet's example",
+      "level": "beginner",
+      "duration_days": 14,
+      "scholar_attribution": [
+        { "book": "Kitab at-Tawhid", "author": "Muhammad ibn Abdul-Wahhab" },
+        { "book": "Tafsir Ibn Kathir", "author": "Ibn Kathir" }
+      ],
+      "intro": "Tawhid is the heart of Islam. This 14-stage track grounds you in the Quranic foundations of monotheism through verses, hadith, and short tafsir excerpts. Each stage takes 10–20 minutes.",
+      "stages": [
+        {
+          "id": "stage-1",
+          "title": "The opening declaration",
+          "summary": "Surah Al-Ikhlas — the most concise statement of Allah's oneness.",
+          "verses": ["112:1", "112:2", "112:3", "112:4"],
+          "hadith_refs": [{ "collection": "bukhari", "number": "5013" }],
+          "reflection_prompt": "What does it mean for Allah to be 'as-Samad' (the Self-Sufficient) in your daily life?"
+        },
+        {
+          "id": "stage-2",
+          "title": "Allah's oneness in lordship",
+          "summary": "Tawhid ar-Rububiyyah — Allah alone is Creator, Sustainer, and Disposer.",
+          "verses": ["1:2", "2:21", "2:22"],
+          "hadith_refs": [],
+          "reflection_prompt": "Name three signs in your day that point to Allah's lordship over creation."
+        },
+        {
+          "id": "stage-3",
+          "title": "Allah's oneness in worship",
+          "summary": "Tawhid al-Uluhiyyah — worship belongs to Allah alone.",
+          "verses": ["1:5", "2:163", "51:56"],
+          "hadith_refs": [{ "collection": "bukhari", "number": "7372" }],
+          "reflection_prompt": "Audit one act of worship today: is it purely for Allah?"
+        },
+        {
+          "id": "stage-4",
+          "title": "His most beautiful names",
+          "summary": "Tawhid al-Asma wa-l-Sifat — affirming Allah's names without distortion.",
+          "verses": ["7:180", "59:22", "59:23", "59:24"],
+          "hadith_refs": [],
+          "reflection_prompt": "Pick one of Allah's names from Surah Al-Hashr 59:22–24 and reflect on its impact."
+        },
+        {
+          "id": "stage-5",
+          "title": "Ayat al-Kursi",
+          "summary": "The greatest verse — a complete summary of Allah's attributes.",
+          "verses": ["2:255"],
+          "hadith_refs": [{ "collection": "muslim", "number": "810" }],
+          "reflection_prompt": "Commit Ayat al-Kursi to memory if you haven't yet, and recite it each morning."
+        },
+        {
+          "id": "stage-6",
+          "title": "The trap of shirk",
+          "summary": "Recognising and avoiding the major and minor forms of associating partners with Allah.",
+          "verses": ["4:48", "31:13"],
+          "hadith_refs": [{ "collection": "bukhari", "number": "6920" }],
+          "reflection_prompt": "Reflect on the difference between major and minor shirk. Which subtle forms might affect you?"
+        },
+        {
+          "id": "stage-7",
+          "title": "Sincerity of intention",
+          "summary": "Ikhlas — the inner condition that gives worship its weight.",
+          "verses": ["98:5", "39:2", "39:3"],
+          "hadith_refs": [{ "collection": "bukhari", "number": "1" }],
+          "reflection_prompt": "Identify one good deed you do habitually. For whom is it really being done?"
+        },
+        {
+          "id": "stage-8",
+          "title": "Trust in Allah",
+          "summary": "Tawakkul — acting with means while relying ultimately on Allah.",
+          "verses": ["3:159", "8:2", "65:3"],
+          "hadith_refs": [{ "collection": "tirmidhi", "number": "2344" }],
+          "reflection_prompt": "Where in your life are you trusting your own planning more than Allah?"
+        },
+        {
+          "id": "stage-9",
+          "title": "Fear, hope, and love",
+          "summary": "The three pillars of the believer's relationship with Allah.",
+          "verses": ["32:16", "39:53", "5:54"],
+          "hadith_refs": [],
+          "reflection_prompt": "Are you currently leaning more on fear, hope, or love? What's the right balance?"
+        },
+        {
+          "id": "stage-10",
+          "title": "Salah as the proof of tawhid",
+          "summary": "Why the daily prayer is the most concrete enactment of belief.",
+          "verses": ["20:14", "29:45"],
+          "hadith_refs": [{ "collection": "muslim", "number": "82" }],
+          "reflection_prompt": "Pick one prayer today and pray it as if it were your last."
+        },
+        {
+          "id": "stage-11",
+          "title": "The signs in creation",
+          "summary": "How Allah points to His oneness through the natural world.",
+          "verses": ["3:190", "3:191", "30:22"],
+          "hadith_refs": [],
+          "reflection_prompt": "Step outside today and observe one ayah (sign) of Allah's creation."
+        },
+        {
+          "id": "stage-12",
+          "title": "The end-state of the believer",
+          "summary": "What tawhid promises in this life and the next.",
+          "verses": ["13:28", "16:97", "33:35"],
+          "hadith_refs": [],
+          "reflection_prompt": "How does the certainty of meeting Allah re-order your priorities this week?"
+        },
+        {
+          "id": "stage-13",
+          "title": "Seeking refuge",
+          "summary": "Surah Al-Falaq and An-Nas — the Prophet's protection against external and internal harm.",
+          "verses": ["113:1", "113:2", "113:3", "113:4", "113:5", "114:1", "114:2", "114:3", "114:4", "114:5", "114:6"],
+          "hadith_refs": [{ "collection": "tirmidhi", "number": "3575" }],
+          "reflection_prompt": "Add the Mu'awwidhatayn to your morning and evening adhkar."
+        },
+        {
+          "id": "stage-14",
+          "title": "Carrying tawhid forward",
+          "summary": "Closing reflection — how to keep tawhid alive after this track ends.",
+          "verses": ["3:102", "4:131"],
+          "hadith_refs": [],
+          "reflection_prompt": "Write down three habits you'll keep to preserve what you've learned."
+        }
+      ]
+    },
+    {
+      "id": "patience-and-perseverance",
+      "title": "Patience and Perseverance",
+      "subtitle": "Sabr through Quranic stories and prophetic example",
+      "level": "beginner",
+      "duration_days": 7,
+      "scholar_attribution": [
+        { "book": "'Uddat as-Sabirin", "author": "Ibn al-Qayyim" },
+        { "book": "Tafsir as-Sa'di", "author": "Abdur-Rahman as-Sa'di" }
+      ],
+      "intro": "A 7-stage track on sabr — patience with obedience, against sin, and through hardship — grounded in Quran narratives.",
+      "stages": [
+        {
+          "id": "stage-1",
+          "title": "What sabr is",
+          "summary": "Surah Al-Asr — patience as one of the four conditions for salvation.",
+          "verses": ["103:1", "103:2", "103:3"],
+          "hadith_refs": [],
+          "reflection_prompt": "Of the four mentioned in Surah Al-Asr, which is hardest for you?"
+        },
+        {
+          "id": "stage-2",
+          "title": "Yusuf in the well",
+          "summary": "Patience in trial without bitterness.",
+          "verses": ["12:18", "12:83"],
+          "hadith_refs": [],
+          "reflection_prompt": "Notice Ya'qub's wording: 'beautiful patience'. What makes patience beautiful?"
+        },
+        {
+          "id": "stage-3",
+          "title": "Ayyub's affliction",
+          "summary": "Trial of body and family — supplication without complaint.",
+          "verses": ["21:83", "21:84", "38:41", "38:44"],
+          "hadith_refs": [],
+          "reflection_prompt": "What is the difference between expressing pain to Allah and complaining about Him?"
+        },
+        {
+          "id": "stage-4",
+          "title": "Reward of the patient",
+          "summary": "Patience rewarded without measure.",
+          "verses": ["2:153", "2:155", "2:156", "2:157", "39:10"],
+          "hadith_refs": [{ "collection": "bukhari", "number": "1283" }],
+          "reflection_prompt": "Name one trial in your life. What hidden reward might be on its other side?"
+        },
+        {
+          "id": "stage-5",
+          "title": "Patience with people",
+          "summary": "Dealing with criticism, family disputes, and disagreement.",
+          "verses": ["3:186", "20:130", "73:10"],
+          "hadith_refs": [],
+          "reflection_prompt": "Identify one relationship that needs more patience from you. What's the next small step?"
+        },
+        {
+          "id": "stage-6",
+          "title": "Patience as worship",
+          "summary": "Steadfastness in salah and obedience.",
+          "verses": ["20:132", "19:65"],
+          "hadith_refs": [],
+          "reflection_prompt": "Which act of worship is hardest for you to maintain? Make a small commitment for the next 7 days."
+        },
+        {
+          "id": "stage-7",
+          "title": "Closing — carrying sabr forward",
+          "summary": "Reflection on what you've internalised.",
+          "verses": ["3:200"],
+          "hadith_refs": [],
+          "reflection_prompt": "Re-read Surah Al-Asr from stage 1. What has changed in how you hear it now?"
+        }
+      ]
+    },
+    {
+      "id": "the-quranic-day",
+      "title": "A Day with the Quran",
+      "subtitle": "Anchoring your daily rhythm to revealed words",
+      "level": "all",
+      "duration_days": 5,
+      "scholar_attribution": [
+        { "book": "Hisn al-Muslim", "author": "Sa'id al-Qahtani" },
+        { "book": "Tafsir Ibn Kathir", "author": "Ibn Kathir" }
+      ],
+      "intro": "A 5-stage walk through the Quranic and prophetic shape of a believer's day — morning, midday, afternoon, evening, and night.",
+      "stages": [
+        {
+          "id": "stage-1",
+          "title": "Beginning the day",
+          "summary": "Morning adhkar and the first thoughts.",
+          "verses": ["30:17", "30:18"],
+          "hadith_refs": [{ "collection": "bukhari", "number": "6325" }],
+          "reflection_prompt": "What is the first sentence you say after waking? Could it be a remembrance instead?"
+        },
+        {
+          "id": "stage-2",
+          "title": "Mid-morning — work as worship",
+          "summary": "Provision is sought, not invented.",
+          "verses": ["62:10", "67:15"],
+          "hadith_refs": [],
+          "reflection_prompt": "How does seeing work as worship change one task on your list today?"
+        },
+        {
+          "id": "stage-3",
+          "title": "Midday — Dhuhr and rest",
+          "summary": "Pausing in the middle of effort.",
+          "verses": ["7:205", "20:130"],
+          "hadith_refs": [],
+          "reflection_prompt": "Are you reaching Dhuhr depleted? What 5 minutes of slowing down could prepare you for it?"
+        },
+        {
+          "id": "stage-4",
+          "title": "Evening — Asr and gratitude",
+          "summary": "Surah Al-Asr again — noticing time.",
+          "verses": ["103:1", "103:2", "103:3"],
+          "hadith_refs": [{ "collection": "bukhari", "number": "6053" }],
+          "reflection_prompt": "Name three blessings from today before Maghrib."
+        },
+        {
+          "id": "stage-5",
+          "title": "Night — closing the day",
+          "summary": "The last words before sleep — forgiveness and trust.",
+          "verses": ["67:1", "67:2", "32:16", "32:17"],
+          "hadith_refs": [{ "collection": "bukhari", "number": "247" }],
+          "reflection_prompt": "What three things in your day need forgiveness? Ask now."
+        }
+      ]
+    }
+  ]
+}

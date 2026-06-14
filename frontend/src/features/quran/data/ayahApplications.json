@@ -1,0 +1,37 @@
+{
+  "1:5": [
+    {
+      "scenario": "You catch yourself relying on a person, plan, or skill more than on Allah for the outcome.",
+      "actions": [
+        { "kind": "reflection", "title": "Where am I leaning?", "prompt": "Where in my week have I quietly placed my trust in something other than Allah? Where did that show up?" },
+        { "kind": "reminder", "title": "Recite 1:5 with attention", "channel": "in-app", "offsetHours": 24 },
+        { "kind": "ask", "seed": "How do scholars distinguish between using lawful means and depending on those means?" }
+      ]
+    },
+    {
+      "scenario": "A request feels too small or too large to bring to Allah.",
+      "actions": [
+        { "kind": "note", "title": "Bring it in salah tonight", "body": "I will name this matter in sujood tonight — the matter that I have been avoiding asking for help with." },
+        { "kind": "ask", "seed": "Is there a basis for asking Allah for small worldly matters in salah?" }
+      ]
+    }
+  ],
+  "2:2": [
+    {
+      "scenario": "You feel doubt or hesitation about something the Quran addresses.",
+      "actions": [
+        { "kind": "reflection", "title": "Name the doubt", "prompt": "What specifically am I doubting? Is it the source, the meaning, or my own willingness to act?" },
+        { "kind": "ask", "seed": "How did the early Muslims handle doubt about a verse they did not yet understand?" }
+      ]
+    }
+  ],
+  "2:255": [
+    {
+      "scenario": "You feel exposed, anxious, or in need of protection before sleep or travel.",
+      "actions": [
+        { "kind": "reminder", "title": "Recite Ayat al-Kursi before sleeping", "channel": "in-app", "offsetHours": 8 },
+        { "kind": "note", "title": "Memorise the ten affirmations", "body": "Read Ibn Kathir's breakdown of the ten affirmations in the verse. Pick one to hold onto each day this week." }
+      ]
+    }
+  ]
+}

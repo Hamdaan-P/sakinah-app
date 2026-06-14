@@ -1,0 +1,43 @@
+{
+  "1:1": [
+    {
+      "scholar": "Imam an-Nawawi",
+      "affiliation": "Shafi'i school",
+      "era": "7th century AH / 13th century CE",
+      "text": "The Basmala is preferred at the start of every permissible matter. To omit it from a recitation of Al-Fatiha is, for the Shafi'is, to leave the prayer incomplete, since the Basmala is counted among its verses in the school's reading.",
+      "source": { "kind": "book", "book": "Al-Majmu' Sharh al-Muhadhdhab", "author": "An-Nawawi" }
+    },
+    {
+      "scholar": "Sheikh Saalih al-Fawzan",
+      "affiliation": "Contemporary, Saudi Arabia",
+      "era": "Contemporary",
+      "text": "The Basmala teaches that no act of a believer begins from himself — every action depends on Allah's enabling and is referred back to His mercy. To say Bismillah with attention is to acknowledge that dependence concretely.",
+      "source": { "kind": "book", "book": "Sharh al-'Aqidah al-Wasitiyyah", "author": "Saalih al-Fawzan" }
+    }
+  ],
+  "1:5": [
+    {
+      "scholar": "Ibn Taymiyyah",
+      "affiliation": "Hanbali school",
+      "era": "7th-8th century AH",
+      "text": "Ibn Taymiyyah identifies this verse as the axis of the surah: the first half (1:1-4) is praise; the second half (1:6-7) is petition. Verse 1:5 is the hinge — the declaration of pure servitude that authorises the petition that follows.",
+      "source": { "kind": "book", "book": "Majmu' al-Fatawa, vol. 14", "author": "Ibn Taymiyyah" }
+    }
+  ],
+  "2:255": [
+    {
+      "scholar": "Imam al-Ghazali",
+      "affiliation": "Shafi'i school",
+      "era": "5th-6th century AH",
+      "text": "Al-Ghazali, in Ihya' 'Ulum al-Din, treats Ayat al-Kursi as a meditation on Allah's attributes: each clause is an opening into knowing Him. To recite it without attention to its content is to handle a treasure as if it were ordinary speech.",
+      "source": { "kind": "book", "book": "Ihya' 'Ulum al-Din", "author": "Al-Ghazali" }
+    },
+    {
+      "scholar": "Sheikh Ibn al-Uthaymin",
+      "affiliation": "Contemporary, Saudi Arabia",
+      "era": "Contemporary",
+      "text": "Ibn al-Uthaymin underscores the sound hadith that whoever recites Ayat al-Kursi after every obligatory prayer, nothing prevents him from Paradise except death. He cautions that the reward is for one who recites with belief and presence, not mere repetition.",
+      "source": { "kind": "book", "book": "Sharh Riyad al-Salihin", "author": "Ibn al-Uthaymin" }
+    }
+  ]
+}

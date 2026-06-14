@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap');
+
+/* Sidebar scroll */
+.sk-sidebar { scrollbar-width: none; }
+.sk-sidebar::-webkit-scrollbar { display: none; }
+
+/* Reg body scroll */
+.sk-reg-body { scrollbar-width: none; }
+.sk-reg-body::-webkit-scrollbar { display: none; }
+
+/* Stage item hover */
+.sk-stage-item:hover { background: rgba(212,168,83,0.05); }
+
+/* Buttons */
+.sk-btn-gold { transition: 0.22s; }
+.sk-btn-gold:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.sk-btn-ghost { transition: 0.22s; }
+.sk-btn-ghost:hover { background: rgba(212,168,83,0.06); }
+.sk-back-btn:hover { background: rgba(212,168,83,0.08); }
+
+/* Phone / field group — focus-within border */
+.sk-field-group:focus-within {
+  border-color: rgba(212,168,83,0.4) !important;
+  background: rgba(212,168,83,0.018) !important;
+}
+
+/* OTP box focus */
+.sk-otp-box:focus {
+  border-color: rgba(212,168,83,0.4) !important;
+  background: rgba(212,168,83,0.018) !important;
+}
+
+/* ID-type chips */
+.sk-chip:hover { border-color: #D4A853; color: #EDE7DA; }
+.sk-chip.sel   { border-color: #D4A853; background: rgba(212,168,83,0.08); color: #EDE7DA; }
+
+/* Upload zone */
+.sk-upload-zone:hover  { border-color: #D4A853; background: rgba(212,168,83,0.03); }
+.sk-upload-drag        { border-color: #D4A853 !important; background: rgba(212,168,83,0.03) !important; }
+.sk-upload-done        { border-color: rgba(127,176,122,0.45) !important; border-style: solid !important; background: rgba(127,176,122,0.03) !important; }
+
+/* Camera frame states */
+.sk-cam-captured           { border-color: rgba(127,176,122,0.55) !important; border-style: solid !important; }
+.sk-cam-ok-ring-visible    { opacity: 1 !important; }
+
+/* Shake for invalid inputs */
+@keyframes sk-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60%  { transform: translateX(-7px); }
+  40%, 80%  { transform: translateX(7px); }
+}
+.sk-shake { animation: sk-shake 0.35s ease; }
+
+/* Raya orb pulsing halo ring */
+@keyframes sk-raya-halo {
+  0%   { transform: scale(1);   opacity: 0.5; }
+  100% { transform: scale(1.5); opacity: 0;   }
+}
+.sk-raya-halo::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid #D4A853;
+  opacity: 0.5;
+  animation: sk-raya-halo 2.4s ease-out infinite;
+  pointer-events: none;
+}
+
+/* Chip hover (used by Niyyah, Values, Mirror reflect cards) */
+.sk-reflect-chip:hover { border-color: #D4A853 !important; color: #EDE7DA !important; }
+
+/* Spectrum segment picker (Values screen — tradition share) */
+.sk-seg:hover { border-color: #D4A853; }
+
+/* Mirror A/B choice cards */
+.sk-choice:hover { border-color: #D4A853 !important; background: rgba(212,168,83,.05) !important; }
+
+/* Pool candidate cards */
+.sk-pool-card:hover { border-color: #D4A853 !important; transform: translateX(3px); }
+
+/* Mirror skip link */
+.sk-skip:hover { color: #9aa0ac; }
+
+/* Scrollable page body — hide scrollbar */
+.sk-page-body { scrollbar-width: none; }
+.sk-page-body::-webkit-scrollbar { display: none; }
+
+/* Role lane cards hover */
+.sk-lane:hover { border-color: #D4A853 !important; transform: translateY(-2px); background: rgba(212,168,83,.04) !important; }
+
+/* Conversation — message input focus */
+.sk-msg-input:focus {
+  border-color: rgba(212,168,83,.35) !important;
+  background: rgba(212,168,83,.018) !important;
+}
+
+/* Send button hover (only when enabled) */
+.sk-send-btn:not(:disabled):hover {
+  filter: brightness(1.1);
+  transform: scale(1.06);
+}
+
+/* Scholar link hover */
+.sk-scholar-link:hover { color: #9aa0ac !important; }
+
+/* Match flow — current step node pulsing ring */
+@keyframes sk-step-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(212,168,83,.12); }
+  50%       { box-shadow: 0 0 0 8px rgba(212,168,83,.05); }
+}
+.sk-step-cur { animation: sk-step-pulse 2.2s ease-in-out infinite; }
+
+/* Liveness check — pulsing ring around the oval face guide */
+@keyframes sk-liveness-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.35; }
+  50%       { transform: scale(1.06); opacity: 0.12; }
+}
+.sk-liveness-pulse { animation: sk-liveness-pulse 2.4s ease-in-out infinite; }
+
+/* Preferences — chip hover */
+.sk-pref-chip:hover { border-color: rgba(212,168,83,.3) !important; color: #EDE7DA !important; }
+
+/* Preferences — range slider (dual + single, both use position:absolute within a relative container) */
+.sk-range {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute;
+  width: 100%;
+  top: 0;
+  height: 100%;
+  background: transparent;
+  pointer-events: none;
+  outline: none;
+  margin: 0;
+  padding: 0;
+}
+.sk-range::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+}
+.sk-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #D4A853;
+  cursor: pointer;
+  pointer-events: all;
+  border: 2px solid #07090f;
+  box-shadow: 0 0 0 3px rgba(212,168,83,.18);
+  margin-top: -7px;
+}
+.sk-range::-moz-range-track { height: 4px; background: transparent; border-radius: 2px; }
+.sk-range::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #D4A853;
+  cursor: pointer;
+  border: 2px solid #07090f;
+  box-shadow: 0 0 0 3px rgba(212,168,83,.18);
+}
+
+/* Raya FAB — fixed bottom-right gold orb */
+.sk-raya-fab {
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.sk-raya-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 32px rgba(212,168,83,.36), 0 0 0 1px rgba(212,168,83,.28) !important;
+}

@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sakinah · Shukr Mode — Dev Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#07090f;--bg2:#0b0f18;--panel:#111826;--panel2:#0f1521;--line:rgba(212,168,83,.16);--line-soft:rgba(255,255,255,.06);
+    --gold:#D4A853;--gold-soft:#e7c984;--gold-dim:rgba(212,168,83,.55);--ink:#EDE7DA;--ink-dim:#9aa0ac;--ink-faint:#5f6675;
+    --green:#7FB07A;--rose:#C98A8A;--blue:#8fa9c9;--shadow:0 30px 60px -20px rgba(0,0,0,.8);--r:22px}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{min-height:100%}
+  body{background:radial-gradient(1200px 800px at 50% -10%,rgba(212,168,83,.07),transparent 60%),var(--bg);color:var(--ink);font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased;padding:30px 26px 70px}
+  .deck{display:flex;gap:46px;justify-content:center;align-items:flex-start;max-width:1560px;margin:0 auto}
+
+  /* ===== rails shared ===== */
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-dim)}
+
+  /* ===== LEFT RAIL ===== */
+  .rail-left{width:312px;flex-shrink:0;padding-top:6px}
+  .rl-title{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:500;line-height:1.02}
+  .rl-title sup{font-size:.5em;color:var(--gold)}
+  .rl-sub{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-top:8px}
+  .rl-lede{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:15px;color:var(--ink-dim);line-height:1.5;margin-top:16px;border-top:1px solid var(--line-soft);padding-top:16px}
+
+  .thesis{border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:22px;background:linear-gradient(160deg,rgba(212,168,83,.05),transparent)}
+  .thesis h4,.principles h4,.stages h4{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;font-weight:500}
+  .thesis p{font-family:'Cormorant Garamond',serif;font-size:18px;line-height:1.4;color:var(--ink);font-weight:400}
+  .thesis p em{font-style:italic;color:var(--gold-soft)}
+
+  .stages{margin-top:26px}
+  .st-group{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin:16px 0 7px;padding-left:2px}
+  .st-group:first-of-type{margin-top:6px}
+  .st-item{display:flex;gap:12px;align-items:flex-start;padding:9px 11px;border-radius:11px;cursor:pointer;transition:.18s;margin-bottom:3px}
+  .st-item:hover{background:rgba(212,168,83,.05)}
+  .st-item .stx .nm{font-size:13.5px;color:var(--ink-dim);font-weight:500;line-height:1.25}
+  .st-item .stx .ds{font-size:11px;color:var(--ink-faint);font-weight:300;margin-top:2px;line-height:1.3}
+  .st-item .lt{width:22px;height:22px;border-radius:6px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);flex-shrink:0;margin-top:1px}
+  .st-item.on{background:rgba(212,168,83,.08);box-shadow:inset 0 0 0 1px var(--line)}
+  .st-item.on .lt{background:var(--gold);color:#0a0e15;border-color:var(--gold)}
+  .st-item.on .stx .nm{color:var(--gold-soft)}
+
+  .principles{margin-top:28px;border-top:1px solid var(--line-soft);padding-top:20px}
+  .principle{display:flex;gap:10px;font-size:12.5px;color:var(--ink-dim);font-weight:300;line-height:1.5;margin-bottom:11px}
+  .principle .pb{color:var(--gold);flex-shrink:0}
+  .principle b{color:var(--ink);font-weight:600}
+
+  /* ===== CENTER PHONE ===== */
+  .phone{width:392px;max-width:100%;height:846px;background:linear-gradient(180deg,var(--bg2),#070a10);border:1px solid var(--line);border-radius:46px;box-shadow:var(--shadow),0 0 0 9px #04060a,0 0 0 10px rgba(212,168,83,.1);position:relative;overflow:hidden;display:flex;flex-direction:column;flex-shrink:0}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:128px;height:26px;background:#04060a;border-radius:0 0 18px 18px;z-index:60}
+  .statusbar{height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:12px;color:var(--ink-dim);flex-shrink:0;z-index:50}
+  .statusbar .dots{display:flex;gap:5px;align-items:center}.statusbar .dots span{width:5px;height:5px;border-radius:50%;background:var(--gold-dim)}
+  .viewport{flex:1;position:relative;overflow:hidden}
+  .screen{position:absolute;inset:0;overflow-y:auto;padding:6px 22px 120px;opacity:0;transform:translateX(18px);pointer-events:none;transition:opacity .42s,transform .42s;scrollbar-width:none}
+  .screen::-webkit-scrollbar{display:none}
+  .screen.active{opacity:1;transform:none;pointer-events:auto}
+  .screen-head{display:flex;align-items:center;gap:12px;padding:6px 0 14px}
+  .back{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--gold);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+  .screen-head .ttl{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500}
+  .screen-head .sub{font-size:11px;color:var(--ink-faint);margin-top:1px}
+  .fx{opacity:0;transform:translateY(12px);animation:rise .5s ease forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .d1{animation-delay:.04s}.d2{animation-delay:.12s}.d3{animation-delay:.2s}.d4{animation-delay:.28s}.d5{animation-delay:.36s}.d6{animation-delay:.44s}
+
+  /* welcome / Raya hero */
+  .welcome{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 30px}
+  .b-orb{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle at 46% 42%,#fde6b8,#d9a948 38%,#7c5e22 72%,transparent 78%);position:relative;margin-bottom:30px;animation:breathe 5s ease-in-out infinite}
+  .b-orb::after{content:"";position:absolute;inset:-22px;border-radius:50%;background:radial-gradient(circle,rgba(212,168,83,.22),transparent 68%);animation:breathe 5s ease-in-out infinite}
+  @keyframes breathe{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.06);filter:brightness(1.12)}}
+  .w-tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:14px}
+  .w-ar{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--gold-soft);margin-bottom:18px}
+  .w-copy{font-family:'Cormorant Garamond',serif;font-size:25px;line-height:1.35;color:var(--ink);font-weight:400}
+  .w-copy em{font-style:italic;color:var(--gold-soft)}
+  .w-copy.small{font-size:19px;color:var(--ink-dim);margin-top:18px}
+
+  .crest{text-align:center;padding:18px 0 8px}
+  .crest .glyph{font-family:'Cormorant Garamond',serif;font-size:40px;color:var(--gold)}
+  .crest .name{font-family:'Cormorant Garamond',serif;font-size:26px;margin-top:4px;letter-spacing:1px}
+  .crest .mode{font-size:10px;letter-spacing:.4em;text-transform:uppercase;color:var(--ink-faint);margin-top:5px}
+  .salaam{text-align:center;color:var(--ink-dim);font-size:13px;font-weight:300;margin:6px 0 14px}.salaam b{color:var(--ink);font-weight:500}
+  .entry-q{text-align:center;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:19px;color:var(--ink-dim);margin:6px 0 18px}
+  .lane{border:1px solid var(--line-soft);border-radius:20px;padding:20px;margin-bottom:13px;cursor:pointer;transition:.24s;position:relative}
+  .lane:hover{border-color:var(--gold);transform:translateY(-2px);background:rgba(212,168,83,.04)}
+  .lane .li{font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--gold);margin-bottom:6px}
+  .lane h3{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:21px;margin-bottom:5px}
+  .lane p{font-size:12px;color:var(--ink-dim);font-weight:300;line-height:1.5}
+  .lane .arr{position:absolute;top:22px;right:20px;color:var(--ink-faint);font-size:20px}
+
+  .card{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line-soft);border-radius:var(--r);padding:18px;margin-bottom:13px;position:relative;overflow:hidden}
+  .card.gold-edge{border-color:var(--line)}
+  .card .corner{position:absolute;top:0;right:0;width:60px;height:60px;background:radial-gradient(circle at top right,rgba(212,168,83,.16),transparent 70%)}
+  .card-k{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:9px}
+  .card h3{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:21px;margin-bottom:5px}
+  .card p{font-size:12.5px;line-height:1.55;color:var(--ink-dim);font-weight:300}
+  .meta-row{display:flex;gap:10px;margin-bottom:13px}
+  .meta{flex:1;border:1px solid var(--line-soft);border-radius:14px;padding:12px;text-align:center;background:rgba(255,255,255,.012)}
+  .meta b{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold-soft);display:block;line-height:1.1}
+  .meta span{font-size:8.5px;color:var(--ink-faint);letter-spacing:.04em;display:block;margin-top:5px}
+  .journey{display:flex;flex-direction:column}
+  .jstep{display:flex;gap:13px;cursor:pointer}
+  .jrail{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:28px}
+  .jnode{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--gold-dim);z-index:2;transition:.25s}
+  .jline{flex:1;width:1.5px;background:var(--line-soft);min-height:12px}
+  .jstep.done .jnode{background:var(--gold);color:#0a0e15;border-color:var(--gold)}
+  .jstep.active .jnode{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 4px rgba(212,168,83,.12)}
+  .jstep.done .jline{background:var(--gold-dim)}
+  .jbody{padding-bottom:12px;flex:1}
+  .jbody .lab{font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint)}
+  .jbody b{font-size:13.5px;display:block;margin-top:1px}.jbody span{font-size:11px;color:var(--ink-faint);font-weight:300}
+  .jstep.active .jbody b{color:var(--gold-soft)}.jbody .pin{font-size:9.5px;color:var(--green);margin-top:2px;display:inline-block}
+  .support{display:flex;align-items:center;gap:12px;border:1px solid var(--line-soft);border-radius:15px;padding:13px 15px;margin-bottom:10px;cursor:pointer;transition:.22s;background:rgba(143,169,201,.04)}
+  .support:hover{border-color:rgba(143,169,201,.3)}
+  .support .si{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--blue);background:rgba(143,169,201,.08);border:1px solid rgba(143,169,201,.2);flex-shrink:0}
+  .support .tx b{font-size:13px;display:block}.support .tx span{font-size:10.5px;color:var(--ink-faint);font-weight:300}
+  .support .arr{margin-left:auto;color:var(--ink-faint)}.support.safe .si{color:var(--green);background:rgba(127,176,122,.08);border-color:rgba(127,176,122,.2)}
+  .btn{display:block;width:100%;text-align:center;border:none;cursor:pointer;font-family:'Manrope',sans-serif;font-weight:600;font-size:14px;letter-spacing:.3px;padding:15px;border-radius:15px;transition:.22s;margin-top:6px}
+  .btn-gold{background:linear-gradient(135deg,var(--gold),#b98b39);color:#0a0e15}.btn-gold:hover{filter:brightness(1.07);transform:translateY(-1px)}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--gold-soft)}.btn-ghost:hover{background:rgba(212,168,83,.06)}
+  .btn-sm{padding:12px;font-size:13px;border-radius:13px}.btn-row{display:flex;gap:10px}.btn-row .btn{flex:1}
+  .intro-p{font-size:13px;color:var(--ink-dim);font-weight:300;line-height:1.6;margin-bottom:14px}
+  .prim{display:flex;gap:13px;align-items:flex-start;border:1px solid var(--line-soft);border-radius:15px;padding:15px;margin-bottom:10px;background:rgba(255,255,255,.012)}
+  .prim .pi{width:38px;height:38px;border-radius:12px;background:rgba(212,168,83,.07);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);flex-shrink:0}
+  .prim b{font-size:13.5px;display:block;margin-bottom:3px}.prim p{font-size:11.5px;color:var(--ink-dim);font-weight:300;line-height:1.5;margin:0}
+  .reflect{border:1px solid var(--line-soft);border-radius:16px;padding:17px;margin-bottom:12px;background:rgba(255,255,255,.012)}
+  .reflect .q{font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;color:var(--ink);line-height:1.35;margin-bottom:12px}
+  .opts{display:flex;flex-direction:column;gap:8px}
+  .chip{border:1px solid var(--line-soft);border-radius:11px;padding:11px 14px;font-size:12.5px;cursor:pointer;transition:.2s;color:var(--ink-dim)}
+  .chip:hover{border-color:var(--gold);color:var(--ink)}.chip.sel{border-color:var(--gold);background:rgba(212,168,83,.08);color:var(--ink)}
+  .spectrum .track{display:flex;gap:8px}
+  .spectrum .seg{flex:1;border:1px solid var(--line-soft);border-radius:11px;padding:11px 7px;text-align:center;cursor:pointer;transition:.2s}
+  .spectrum .seg:hover{border-color:var(--gold)}.spectrum .seg.sel{border-color:var(--gold);background:rgba(212,168,83,.08)}
+  .spectrum .seg b{font-size:11.5px;display:block}.spectrum .seg span{font-size:9px;color:var(--ink-faint);font-weight:300;display:block;margin-top:3px;line-height:1.3}
+  .gentle-note{font-size:11px;color:var(--ink-faint);font-weight:300;font-style:italic;line-height:1.5;margin-top:10px;border-left:2px solid var(--green);padding-left:12px}
+  .mirror-progress{display:flex;gap:4px;margin-bottom:14px}
+  .mirror-progress span{height:3px;flex:1;border-radius:3px;background:var(--line-soft)}.mirror-progress span.on{background:var(--gold)}
+  .dim-tag{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold-dim);text-align:center;margin-bottom:8px}
+  .q-text{font-family:'Cormorant Garamond',serif;font-size:23px;font-weight:500;line-height:1.25;text-align:center;margin-bottom:22px;padding:0 4px}
+  .choice{border:1px solid var(--line-soft);border-radius:17px;padding:17px 16px;margin-bottom:11px;cursor:pointer;transition:.22s}
+  .choice:hover{border-color:var(--gold);background:rgba(212,168,83,.05)}
+  .choice .lab{font-size:10px;letter-spacing:.2em;color:var(--ink-faint);text-transform:uppercase}
+  .choice .opt{font-size:14px;font-weight:500;margin-top:5px;line-height:1.4}
+  .or-divider{text-align:center;font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--gold-dim);font-size:16px;margin:1px 0 11px}
+  .skip{text-align:center;font-size:12px;color:var(--ink-faint);margin-top:4px;cursor:pointer}
+  .portrait{text-align:center;padding:4px 0 12px}
+  .portrait .aura{width:96px;height:96px;border-radius:50%;margin:0 auto 12px;background:radial-gradient(circle at 35% 30%,rgba(212,168,83,.4),transparent 55%),radial-gradient(circle at 70% 75%,rgba(127,176,122,.3),transparent 55%),#0f1521;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:34px;color:var(--gold-soft)}
+  .quote{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:16px;line-height:1.5;color:var(--ink);padding:4px 6px}
+  .signal-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line-soft)}
+  .signal-row:last-child{border:none}.signal-row .nm{font-size:12px;color:var(--ink-dim);font-weight:300}.signal-row .vl{font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--gold-soft)}
+  .meter{height:5px;border-radius:5px;background:var(--line-soft);margin-top:7px;overflow:hidden}.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#b98b39);border-radius:5px}
+  .insight{font-size:11.5px;line-height:1.6;color:var(--ink-dim);font-weight:300;border-left:2px solid var(--gold);padding-left:13px;margin:13px 0}
+  .active-banner{background:rgba(212,168,83,.05);border:1px solid var(--line);border-radius:13px;padding:11px 13px;font-size:11.5px;color:var(--gold-soft);font-weight:300;line-height:1.5;margin-bottom:13px;text-align:center}
+  .pool-card{display:flex;gap:13px;align-items:center;border:1px solid var(--line-soft);border-radius:17px;padding:14px;margin-bottom:10px;cursor:pointer;transition:.22s;background:rgba(255,255,255,.012)}
+  .pool-card:hover{border-color:var(--gold);transform:translateX(3px)}
+  .pool-aura{width:48px;height:48px;border-radius:50%;flex-shrink:0;background:radial-gradient(circle at 40% 35%,rgba(201,138,138,.4),transparent 55%),radial-gradient(circle at 70% 70%,rgba(212,168,83,.32),transparent 55%),#0f1521;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--ink)}
+  .pool-card .tx b{font-size:14.5px;display:block}.pool-card .tx .mt{font-size:10px;color:var(--ink-faint);margin:1px 0 4px}.pool-card .tx .rz{font-size:11px;color:var(--gold-soft);font-weight:300}
+  .pool-card .arr{margin-left:auto;color:var(--ink-faint);font-size:17px}
+  .cand-card{background:linear-gradient(165deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:24px;padding:20px 18px;position:relative;overflow:hidden}
+  .cand-aura{width:84px;height:84px;border-radius:50%;margin:2px auto 10px;background:radial-gradient(circle at 40% 35%,rgba(201,138,138,.42),transparent 55%),radial-gradient(circle at 70% 70%,rgba(212,168,83,.34),transparent 55%),#0f1521;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--ink)}
+  .cand-name{text-align:center;font-family:'Cormorant Garamond',serif;font-size:22px}
+  .cand-meta{text-align:center;font-size:10.5px;color:var(--ink-faint);margin-top:3px}
+  .resonance{display:flex;flex-direction:column;gap:9px;margin:16px 0 4px}
+  .res{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink-dim);font-weight:300}
+  .res .tk{width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0;box-shadow:0 0 8px var(--gold-dim)}.res b{color:var(--ink);font-weight:600}
+  .no-face{text-align:center;font-size:10px;color:var(--ink-faint);font-weight:300;font-style:italic;margin:12px 0 14px}
+  .mf{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line-soft);opacity:.45;transition:.3s}
+  .mf:last-child{border:none}.mf.done,.mf.cur{opacity:1}
+  .mf .mn{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--gold-dim);flex-shrink:0;font-family:'Cormorant Garamond',serif}
+  .mf.done .mn{background:var(--gold);color:#0a0e15;border-color:var(--gold)}.mf.cur .mn{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 4px rgba(212,168,83,.12)}
+  .mf b{font-size:13px;display:block;margin-bottom:2px}.mf p{font-size:11px;color:var(--ink-faint);font-weight:300;line-height:1.4;margin:0}
+  .mf .cur-tag{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);margin-top:3px;display:inline-block}
+  .conv-banner{background:rgba(127,176,122,.08);border:1px solid rgba(127,176,122,.25);border-radius:13px;padding:11px 13px;font-size:11px;color:#bfe0b8;line-height:1.5;font-weight:300;margin-bottom:13px;text-align:center}
+  .wali-chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--gold-soft);border:1px solid var(--line);border-radius:30px;padding:5px 12px;background:rgba(212,168,83,.05)}
+  .curriculum{border:1px solid var(--line-soft);border-radius:15px;padding:13px;margin-bottom:13px;background:rgba(255,255,255,.012)}
+  .curriculum .ck{font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:9px}
+  .topic-line{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:12.5px}
+  .topic-line .ti{width:19px;height:19px;border-radius:50%;border:1px solid var(--line-soft);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;color:var(--ink-faint)}
+  .topic-line.open{color:var(--ink)}.topic-line.open .ti{background:rgba(127,176,122,.15);border-color:transparent;color:var(--green)}
+  .topic-line.now .ti{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 3px rgba(212,168,83,.12)}.topic-line.now{color:var(--gold-soft)}
+  .topic-line .st{margin-left:auto;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}.topic-line.open .st{color:var(--green)}.topic-line.now .st{color:var(--gold)}
+  .topic-line.nikah{color:var(--ink-faint)}.topic-line.nikah .ti{border-style:dashed}
+  .bubble{max-width:84%;padding:11px 13px;border-radius:15px;font-size:12.5px;line-height:1.5;font-weight:300;margin-bottom:9px}
+  .bubble.me{background:rgba(255,255,255,.05);border:1px solid var(--line-soft);border-bottom-right-radius:5px;margin-left:auto}
+  .bubble.her{background:rgba(201,138,138,.06);border:1px solid rgba(201,138,138,.18);border-bottom-left-radius:5px;margin-right:auto}
+  .bubble.ai{background:rgba(212,168,83,.06);border:1px solid var(--line);border-bottom-left-radius:5px;margin-right:auto}
+  .bubble .who{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:4px;display:block}
+  .prompt-card{border:1px dashed var(--line);border-radius:14px;padding:13px;margin:11px 0;background:rgba(212,168,83,.03)}
+  .prompt-card .k{font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:6px}
+  .prompt-card p{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:15px;line-height:1.4;color:var(--ink)}
+  .timer-note{font-size:10px;color:var(--ink-faint);text-align:center;margin-top:8px;font-weight:300}
+  .vent-stream{display:flex;flex-direction:column;gap:10px;margin-top:4px}.vent-tag{font-size:10px;color:var(--ink-faint);text-align:center;margin-top:13px;font-weight:300;line-height:1.5}
+  .safe-row{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--line-soft)}.safe-row:last-child{border:none}
+  .safe-row .si2{width:32px;height:32px;border-radius:10px;background:rgba(127,176,122,.08);border:1px solid rgba(127,176,122,.2);display:flex;align-items:center;justify-content:center;color:var(--green);font-size:14px;flex-shrink:0}
+  .safe-row b{font-size:12.5px;display:block;margin-bottom:2px}.safe-row p{font-size:11px;color:var(--ink-faint);font-weight:300;line-height:1.4;margin:0}
+  .photo-demo{border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center;margin:12px 0;background:repeating-linear-gradient(45deg,rgba(255,255,255,.02),rgba(255,255,255,.02) 10px,transparent 10px,transparent 20px)}
+  .photo-demo .lockico{font-size:28px;color:var(--gold-dim)}.photo-demo .wm{font-size:8.5px;color:var(--ink-faint);letter-spacing:.14em;margin-top:8px;opacity:.7}
+  .divider-note{text-align:center;font-size:10px;color:var(--ink-faint);letter-spacing:.24em;text-transform:uppercase;margin:16px 0 11px}
+
+  /* Raya presence */
+  .raya-fab{position:absolute;right:16px;bottom:18px;z-index:80;display:flex;align-items:center;gap:9px;cursor:pointer}
+  .raya-orb{width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#f0d28f,#cf9f44 70%);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:24px;color:#3a2c0c;box-shadow:0 8px 22px rgba(212,168,83,.35);position:relative;flex-shrink:0;transition:transform .2s}
+  .raya-fab:hover .raya-orb{transform:scale(1.06)}
+  .raya-orb::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:1.5px solid var(--gold);opacity:.5;animation:halo 2.4s ease-out infinite}
+  @keyframes halo{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.5);opacity:0}}
+  .raya-hint{background:rgba(8,11,17,.92);border:1px solid var(--line);border-radius:30px;padding:8px 14px;font-size:11px;color:var(--gold-soft);white-space:nowrap;font-weight:300;backdrop-filter:blur(8px);transition:opacity .4s,transform .4s}
+  .raya-hint b{color:var(--ink);font-weight:500}
+  .raya-fab.collapsed .raya-hint{opacity:0;transform:translateX(10px);pointer-events:none;position:absolute;right:60px}
+  .scrim{position:absolute;inset:0;background:rgba(5,7,11,.6);opacity:0;pointer-events:none;transition:.3s;z-index:90;backdrop-filter:blur(2px)}.scrim.show{opacity:1;pointer-events:auto}
+  .raya-sheet{position:absolute;left:0;right:0;bottom:0;z-index:95;background:linear-gradient(180deg,#141b29,#0f1521);border-top:1px solid var(--line);border-radius:26px 26px 0 0;padding:20px 20px 24px;transform:translateY(110%);transition:transform .38s cubic-bezier(.2,.8,.2,1);max-height:76%;overflow-y:auto;scrollbar-width:none}
+  .raya-sheet::-webkit-scrollbar{display:none}.raya-sheet.show{transform:translateY(0)}
+  .sheet-grab{width:38px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 14px}
+  .sheet-head{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+  .sheet-head .sa{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#f0d28f,#cf9f44 70%);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:19px;color:#3a2c0c;flex-shrink:0}
+  .sheet-head b{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;display:block}.sheet-head span{font-size:10px;color:var(--green);letter-spacing:.04em}
+  .sheet-intro{font-size:12.5px;color:var(--ink-dim);font-weight:300;line-height:1.6;margin-bottom:14px}
+  .help-chip{border:1px solid var(--line-soft);border-radius:13px;padding:12px 14px;margin-bottom:8px;font-size:12.5px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:11px;color:var(--ink)}
+  .help-chip:hover{border-color:var(--gold);background:rgba(212,168,83,.05)}.help-chip .hc{font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:16px}
+  .help-reply{font-size:12.5px;color:var(--ink);font-weight:300;line-height:1.6;border-left:2px solid var(--gold);padding:4px 0 4px 13px;margin:6px 0 14px;display:none}.help-reply.show{display:block;animation:rise .4s}.help-reply em{color:var(--gold-soft);font-style:italic}
+
+  /* ===== RIGHT RAIL ===== */
+  .rail-right{width:344px;flex-shrink:0;padding-top:6px}
+  .rr-tag{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:30px;padding:7px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-soft);background:rgba(212,168,83,.05)}
+  .rr-head{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:500;line-height:1.08;margin:18px 0 0}
+  .rr-intro{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:15px;color:var(--ink-dim);line-height:1.5;margin-top:16px}
+  .rr-intro em{color:var(--gold-soft)}
+  .where{border:1px dashed var(--line);border-radius:14px;padding:14px;margin:22px 0}
+  .where .wk{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:10px}
+  .where .wtrack{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .wstep{font-family:'JetBrains Mono',monospace;font-size:10px;border:1px solid var(--line-soft);border-radius:7px;padding:5px 8px;color:var(--ink-faint)}
+  .wstep.on{background:rgba(212,168,83,.12);border-color:var(--gold);color:var(--gold-soft)}
+  .warrow{color:var(--ink-faint);font-size:10px}
+  .rr-sec{margin-top:22px}
+  .rr-sec h4{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:11px}
+  .rr-sec.not h4{color:var(--rose)}
+  .rr-li{display:flex;gap:10px;font-size:13px;color:var(--ink-dim);font-weight:300;line-height:1.5;margin-bottom:10px}
+  .rr-li .bb{color:var(--gold);flex-shrink:0;margin-top:1px}
+  .rr-sec.not .rr-li .bb{color:var(--rose)}
+  .rr-li b{color:var(--ink);font-weight:600}
+  .rr-li em{font-style:italic;color:var(--gold-soft)}
+  .rr-motion{font-size:12.5px;color:var(--ink-faint);font-weight:300;line-height:1.55;font-style:italic;border-top:1px solid var(--line-soft);padding-top:14px;margin-top:6px}
+
+  @media (max-width:1300px){.rail-right{display:none}}
+  @media (max-width:1000px){.rail-left{display:none}}
+
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#0a0e15;font-size:12.5px;font-weight:600;padding:12px 22px;border-radius:30px;opacity:0;transition:.3s;z-index:200;pointer-events:none}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- ===================== LEFT RAIL ===================== -->
+  <aside class="rail-left">
+    <div class="rl-title">Sakinah<sup>+</sup> · Shukr Mode</div>
+    <div class="rl-sub">Dev Reference · Full Flow</div>
+    <div class="rl-lede">From a Raya welcome to a dignified decision — every screen, with the why, the must-dos, and the lines we never cross.</div>
+
+    <div class="thesis">
+      <h4>The thesis we are building</h4>
+      <p>A matchmaking tool that begins with the <em>heart</em>, not a face. Raya hosts the journey; <em>compatibility is the byproduct</em> of becoming ready.</p>
+    </div>
+
+    <div class="stages">
+      <h4>The flow — click to walk it</h4>
+      <div id="stageList"></div>
+    </div>
+
+    <div class="principles">
+      <h4>Anchoring principles</h4>
+      <div class="principle"><span class="pb">۞</span><div><b>Matchmaking is the spine.</b> Wellbeing is scaffolding; community is soil. Never lead with the Vent Box.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Character before a face.</b> No swipe, no feed, no public profiles, no photo-first.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Find-your-own maslak.</b> The app takes no doctrinal stance; nobody is told they were filtered out for who they are.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>No riya engine.</b> Worship and gathering never feed matching or a public score.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Women-first safety.</b> Defend the authorized insider, not just the outsider.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Intimacy after nikah.</b> Never a pre-nikah chat topic.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Raya everywhere; consent always with the seeker.</b> A wali may steward, never decide.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Honesty over a bad match.</b> Cadence flexes with density. Launch concentrated (UEF · Chennai).</div></div>
+    </div>
+  </aside>
+
+  <!-- ===================== CENTER PHONE ===================== -->
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="statusbar"><span>9:41</span><span style="font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--gold-dim)">سكينة</span><span class="dots">●●● 5G ▪</span></div>
+    <div class="viewport" id="viewport">
+
+      <!-- A · WELCOME (Raya hero) -->
+      <section class="screen active" id="welcome">
+        <div class="welcome">
+          <div class="b-orb fx d1"></div>
+          <div class="w-tag fx d2">Raya · your companion</div>
+          <div class="w-ar fx d2">السلام عليكم</div>
+          <div class="w-copy fx d3">I'm Raya. Looking for a spouse can feel like being <em>measured</em> — endlessly. Here, we don't start with a photo, or a checklist.</div>
+          <div class="w-copy small fx d4">We start with <em>you</em>. Whenever you're ready.</div>
+          <button class="btn btn-gold fx d5" style="max-width:280px" onclick="go('entry')">Begin gently →</button>
+        </div>
+      </section>
+
+      <!-- A · ENTRY -->
+      <section class="screen" id="entry">
+        <div class="crest fx d1"><div class="glyph">۞</div><div class="name">Sakinah</div><div class="mode">Shukr Mode · the path to nikah</div></div>
+        <div class="entry-q fx d2">"Who are you here as?"</div>
+        <div class="lane fx d2" onclick="go('expect')"><div class="arr">›</div><div class="li">ع</div><h3>I'm seeking</h3><p>Walk the journey yourself — at your pace, with Raya beside you the whole way.</p></div>
+        <div class="lane fx d3" onclick="go('expect')"><div class="arr">›</div><div class="li">۩</div><h3>I'm a wali / family</h3><p>Help someone you love — steward alongside them. The decision stays theirs.</p></div>
+      </section>
+
+      <!-- A · EXPECT -->
+      <section class="screen" id="expect">
+        <div class="screen-head"><button class="back" onclick="go('entry')">‹</button><div><div class="ttl">Before we begin</div><div class="sub">What this journey is — and isn't</div></div></div>
+        <p class="intro-p fx d1">Take a breath. A few honest reflections, at your pace — not a form to rush.</p>
+        <div class="prim fx d2"><div class="pi">☉</div><div><b>Never a blank page</b><p>Raya guides every step. You only write if you want to.</p></div></div>
+        <div class="prim fx d2"><div class="pi">◷</div><div><b>Go at your pace</b><p>Pause and return anytime. Progress is saved.</p></div></div>
+        <div class="prim fx d3"><div class="pi">⌥</div><div><b>Speak, don't type</b><p>Urdu, Hindi, Tamil, English — Raya listens.</p></div></div>
+        <div class="prim fx d3"><div class="pi">✓</div><div><b>No wrong answers</b><p>A mirror, not a test.</p></div></div>
+        <button class="btn btn-gold fx d4" onclick="go('kyc')">I'm ready — verify first →</button>
+      </section>
+
+      <!-- A · KYC -->
+      <section class="screen" id="kyc">
+        <div class="screen-head"><button class="back" onclick="go('expect')">‹</button><div><div class="ttl">Let's verify you</div><div class="sub">So this stays a safe, real space</div></div></div>
+        <div class="meta-row fx d1"><div class="meta" style="flex:none;width:100%"><div style="display:flex;gap:6px"><div style="flex:1;height:4px;border-radius:4px;background:var(--gold)"></div><div style="flex:1;height:4px;border-radius:4px;background:var(--gold)"></div><div style="flex:1;height:4px;border-radius:4px;background:var(--line-soft)"></div><div style="flex:1;height:4px;border-radius:4px;background:var(--line-soft)"></div></div></div></div>
+        <div class="prim fx d1" style="border-color:rgba(127,176,122,.25);background:rgba(127,176,122,.04)"><div class="pi" style="color:var(--green);background:rgba(127,176,122,.08);border-color:rgba(127,176,122,.2)">✓</div><div><b>Phone number</b><p>+91 ••••• ••741 · confirmed</p></div></div>
+        <div class="reflect fx d2"><div class="q" style="font-size:15px">Government ID — choose one</div>
+          <div class="opts" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="chip sel" style="text-align:center" onclick="pick(this)">Aadhaar · DigiLocker</div>
+            <div class="chip" style="text-align:center" onclick="pick(this)">Passport</div>
+            <div class="chip" style="text-align:center" onclick="pick(this)">PAN</div>
+            <div class="chip" style="text-align:center" onclick="pick(this)">Voter ID</div>
+          </div>
+        </div>
+        <div class="insight fx d3" style="border-color:var(--green);color:#bcd6b8">Your ID is <b style="color:#9cc596">minimised and encrypted</b> — only name, age, gender; raw Aadhaar never stored; <b style="color:#9cc596">never shown to a match</b>. It keeps out fakes and makes a banned person stay banned.</div>
+        <button class="btn btn-gold fx d3" onclick="go('kyc2')">Verify with DigiLocker →</button>
+      </section>
+
+      <!-- A · LIVENESS -->
+      <section class="screen" id="kyc2">
+        <div class="screen-head"><button class="back" onclick="go('kyc')">‹</button><div><div class="ttl">One quick look</div><div class="sub">Liveness · stays private</div></div></div>
+        <div class="portrait fx d1"><div class="aura" id="selfieAura" style="border-style:dashed;color:var(--gold-dim)">◉</div></div>
+        <p class="intro-p fx d2" style="text-align:center">Center your face and blink once — proves you're real and matches your ID. <b style="color:#9cc596;font-weight:500">No one but the system ever sees it.</b></p>
+        <button class="btn btn-gold fx d3" id="capBtn" onclick="verifyDone()">Capture &amp; verify</button>
+        <div id="kycResult" style="display:none">
+          <div style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin:14px 0"><span class="wali-chip" style="color:var(--green);border-color:rgba(127,176,122,.25)">✓ Phone</span><span class="wali-chip" style="color:var(--green);border-color:rgba(127,176,122,.25)">✓ ID verified</span><span class="wali-chip" style="color:var(--green);border-color:rgba(127,176,122,.25)">✓ Photo-matched</span></div>
+          <button class="btn btn-gold" onclick="go('home')">Enter Sakinah →</button>
+        </div>
+      </section>
+
+      <!-- B · HOME -->
+      <section class="screen" id="home">
+        <div class="crest fx d1"><div class="glyph">۞</div><div class="name">Sakinah</div><div class="mode">Shukr Mode · seeker lane</div></div>
+        <div class="salaam fx d1">السلام عليكم, <b>Ayman</b> — your journey continues.</div>
+        <div class="meta-row fx d2"><div class="meta"><b>4/7</b><span>PHASE</span></div><div class="meta"><b>Sunni·Hanafi</b><span>TRADITION</span></div><div class="meta"><b>Verified</b><span>IDENTITY</span></div></div>
+        <div class="card gold-edge fx d2"><div class="corner"></div><div class="card-k">Your journey to marriage</div>
+          <div class="journey">
+            <div class="jstep done" onclick="go('niyyah')"><div class="jrail"><div class="jnode">١</div><div class="jline"></div></div><div class="jbody"><div class="lab">Phase 1</div><b>Niyyah · intention</b><span>Why marriage, why now</span></div></div>
+            <div class="jstep done" onclick="go('values')"><div class="jrail"><div class="jnode">٢</div><div class="jline"></div></div><div class="jbody"><div class="lab">Phase 2</div><b>What you bring + tradition</b><span>Values & your maslak</span></div></div>
+            <div class="jstep done" onclick="go('mirror')"><div class="jrail"><div class="jnode">٣</div><div class="jline"></div></div><div class="jbody"><div class="lab">Phase 3</div><b>The Mirror</b><span>Character through 9 reflections</span></div></div>
+            <div class="jstep active" onclick="go('pool')"><div class="jrail"><div class="jnode">٤</div><div class="jline"></div></div><div class="jbody"><div class="lab">Phase 4 · now</div><b>Your considered few</b><span>A handful, curated</span><span class="pin">● 4 to consider</span></div></div>
+            <div class="jstep" onclick="go('matchflow')"><div class="jrail"><div class="jnode">٥</div><div class="jline"></div></div><div class="jbody"><div class="lab">Phase 5</div><b>Match flow</b><span>A structured opening</span></div></div>
+            <div class="jstep" onclick="go('conversation')"><div class="jrail"><div class="jnode">٦</div><div class="jline"></div></div><div class="jbody"><div class="lab">Phase 6</div><b>Communication</b><span>Topic by topic, with family</span></div></div>
+            <div class="jstep" onclick="go('decision')"><div class="jrail"><div class="jnode">٧</div></div><div class="jbody"><div class="lab">Phase 7</div><b>The decision</b><span>Proceed, pause, or close</span></div></div>
+          </div>
+        </div>
+        <button class="btn btn-gold fx d3" onclick="go('pool')">View your considered few →</button>
+        <div class="divider-note fx d4">Quietly in the background</div>
+        <div class="support safe fx d4" onclick="go('safety')"><div class="si">⛨</div><div class="tx"><b>Your safety & privacy</b><span>Verified-only · watermarked · report anytime</span></div><div class="arr">›</div></div>
+        <div class="support fx d5" onclick="go('community')"><div class="si" style="color:#9cc596;background:rgba(127,176,122,.08);border-color:rgba(127,176,122,.2)">◷</div><div class="tx"><b>Community (optional)</b><span>Belonging for its own sake — never scored</span></div><div class="arr">›</div></div>
+        <div class="support fx d5" onclick="go('vent')"><div class="si">﴾﴿</div><div class="tx"><b>Vent Box</b><span>A safe ear — never used in matching</span></div><div class="arr">›</div></div>
+      </section>
+
+      <!-- C · NIYYAH -->
+      <section class="screen" id="niyyah">
+        <div class="screen-head"><button class="back" onclick="go('home')">‹</button><div><div class="ttl">Niyyah</div><div class="sub">Phase 1 · intention · guided by Raya</div></div></div>
+        <p class="intro-p fx d1">Before anyone else, we speak of you. No wrong answers — and Raya is right there if you're unsure.</p>
+        <div class="reflect fx d2"><div class="q">"Why marriage, and why now?"</div><div class="opts">
+          <div class="chip" onclick="pick(this)">To build a home of calm and worship together</div>
+          <div class="chip sel" onclick="pick(this)">I feel ready to grow alongside someone</div>
+          <div class="chip" onclick="pick(this)">Family is encouraging me, and I'm open</div>
+        </div></div>
+        <div class="reflect fx d3"><div class="q">"What season of life are you in?"</div><div class="opts">
+          <div class="chip sel" onclick="pick(this)">Building — career, deen, and self</div>
+          <div class="chip" onclick="pick(this)">Settled and steady — ready to share it</div>
+          <div class="chip" onclick="pick(this)">A fresh start after a hard chapter</div>
+        </div></div>
+        <button class="btn btn-gold fx d4" onclick="go('values')">Continue →</button>
+      </section>
+
+      <!-- C · VALUES -->
+      <section class="screen" id="values">
+        <div class="screen-head"><button class="back" onclick="go('niyyah')">‹</button><div><div class="ttl">What you bring</div><div class="sub">Phase 2 · values & tradition</div></div></div>
+        <p class="intro-p fx d1">We ask first what <em style="color:var(--gold-soft);font-style:italic">you</em> bring — and who you are — so we find someone who shares your understanding of the deen.</p>
+        <div class="reflect fx d2"><div class="q">"The value I most want to bring…"</div><div class="opts">
+          <div class="chip sel" onclick="pick(this)">Steadiness — a calm, reliable presence</div>
+          <div class="chip" onclick="pick(this)">Generosity — giving without keeping score</div>
+          <div class="chip" onclick="pick(this)">Patience — slow to anger, quick to repair</div>
+        </div></div>
+        <div class="reflect fx d3"><div class="q">"Your tradition of practice"</div>
+          <p style="font-size:11px;color:var(--ink-faint);font-weight:300;margin:-6px 0 11px">You describe your own. We never ask you to exclude anyone else's.</p>
+          <div class="opts">
+            <div class="chip sel" onclick="pick(this)">Sunni — Hanafi</div>
+            <div class="chip" onclick="pick(this)">Sunni — Shafi'i / Maliki / Hanbali</div>
+            <div class="chip" onclick="pick(this)">Shia</div>
+            <div class="chip" onclick="pick(this)">Just Muslim — I don't label it</div>
+          </div>
+        </div>
+        <div class="reflect fx d4"><div class="q">"How much should a match share it?"</div>
+          <div class="spectrum"><div class="track">
+            <div class="seg sel" onclick="seg(this)"><b>Must share</b><span>Same tradition</span></div>
+            <div class="seg" onclick="seg(this)"><b>Open within</b><span>My school</span></div>
+            <div class="seg" onclick="seg(this)"><b>Open to all</b><span>Anyone who prays</span></div>
+          </div></div>
+          <div class="gentle-note">No one is ever told they were filtered out for who they are. Circles that don't overlap simply never meet — gently.</div>
+        </div>
+        <div class="reflect fx d5"><div class="q">"Where are you in life?"</div><div class="opts">
+          <div class="chip sel" onclick="pick(this)">Never married</div>
+          <div class="chip" onclick="pick(this)">Divorced — open to a new beginning</div>
+          <div class="chip" onclick="pick(this)">Widowed</div>
+        </div></div>
+        <button class="btn btn-gold fx d6" onclick="go('mirror')">Continue to the Mirror →</button>
+      </section>
+
+      <!-- C · MIRROR -->
+      <section class="screen" id="mirror">
+        <div class="screen-head"><button class="back" onclick="go('values')">‹</button><div><div class="ttl">The Mirror</div><div class="sub">Phase 3 · character through gratitude</div></div></div>
+        <div class="mirror-progress" id="mprog"><span class="on"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="dim-tag" id="dimTag">1 of 9 · Parents & Family</div>
+        <div class="q-text" id="qText">When you picture a hard week, where does your gratitude land first?</div>
+        <div class="choice" onclick="nextQ()"><div class="lab">If you</div><div class="opt" id="optA">Find peace in calling your parents — their voice steadies you</div></div>
+        <div class="or-divider">or</div>
+        <div class="choice" onclick="nextQ()"><div class="lab">If you</div><div class="opt" id="optB">Find peace in solitude first, then reach out once settled</div></div>
+        <div class="skip" onclick="nextQ()">Neither fits → reflect in words instead</div>
+        <div class="conv-banner" style="margin-top:16px">Nine dimensions reveal a <b>value, not a preference</b>. The ninth — closeness — shapes your private portrait only; <b>never</b> a topic before nikah.</div>
+      </section>
+
+      <!-- C · PORTRAIT -->
+      <section class="screen" id="portrait">
+        <div class="screen-head"><button class="back" onclick="go('home')">‹</button><div><div class="ttl">Your portrait</div><div class="sub">Drawn from your reflections</div></div></div>
+        <div class="portrait fx d1"><div class="aura">ع</div><div class="quote">"Someone who finds steadiness in routine, gives quietly, and is learning to let people in."</div></div>
+        <div class="card fx d2"><div class="card-k">What your gratitude reveals</div>
+          <div class="signal-row"><span class="nm">Steadiness under pressure</span><span class="vl">High</span></div><div class="meter"><i style="width:82%"></i></div>
+          <div class="signal-row" style="margin-top:11px"><span class="nm">Quiet generosity</span><span class="vl">High</span></div><div class="meter"><i style="width:78%"></i></div>
+          <div class="signal-row" style="margin-top:11px"><span class="nm">Emotional openness</span><span class="vl">Growing</span></div><div class="meter"><i style="width:48%"></i></div>
+        </div>
+        <div class="insight fx d3">No raw answer is shown to anyone — only soft, derived resonance, after mutual interest. Standing comes from <b>verification</b>, not displayed worship.</div>
+      </section>
+
+      <!-- D · POOL -->
+      <section class="screen" id="pool">
+        <div class="screen-head"><button class="back" onclick="go('home')">‹</button><div><div class="ttl">Your considered few</div><div class="sub">Phase 4 · curated, never a feed</div></div></div>
+        <div class="active-banner fx d1">A handful to reflect on — not an endless scroll. Pass on one, the next takes its place. You may <b>actively pursue only one or two</b>.</div>
+        <div class="pool-card fx d2" onclick="go('candidate')"><div class="pool-aura">ف</div><div class="tx"><b>Fatima · 27</b><div class="mt">Chennai · Sunni Hanafi · Verified</div><div class="rz">Shared intention · steadiness · family-centred</div></div><div class="arr">›</div></div>
+        <div class="pool-card fx d2" onclick="go('candidate')"><div class="pool-aura">م</div><div class="tx"><b>Maryam · 25</b><div class="mt">Vellore · Sunni Hanafi · Verified</div><div class="rz">Quiet generosity · values learning together</div></div><div class="arr">›</div></div>
+        <div class="pool-card fx d3" onclick="go('candidate')"><div class="pool-aura">ع</div><div class="tx"><b>Aisha · 28</b><div class="mt">Chennai · Sunni Hanafi · Verified</div><div class="rz">Calm, dependable · close to family</div></div><div class="arr">›</div></div>
+        <div class="insight fx d4">In a thin week you'll see fewer — and we'll say so honestly. <em style="font-style:italic;color:var(--gold-soft)">"We'd rather show you no one than the wrong one."</em></div>
+      </section>
+
+      <!-- D · CANDIDATE -->
+      <section class="screen" id="candidate">
+        <div class="screen-head"><button class="back" onclick="go('pool')">‹</button><div><div class="ttl">A resonance</div><div class="sub">Character first, never a face</div></div></div>
+        <div class="cand-card fx d1"><div class="cand-aura">ف</div><div class="cand-name">Fatima · 27</div><div class="cand-meta">Chennai · Sunni Hanafi · Verified · Wali linked</div>
+          <div class="resonance">
+            <div class="res"><span class="tk"></span>Shared intention: <b>a home of calm and worship</b></div>
+            <div class="res"><span class="tk"></span>You both bring <b>steadiness</b>, value <b>quiet generosity</b></div>
+            <div class="res"><span class="tk"></span>Both <b>learning to let people in</b></div>
+            <div class="res"><span class="tk"></span>Same tradition — <b>Sunni Hanafi</b></div>
+          </div>
+          <div class="no-face">Her face isn't shown — neither is yours. A photo is exchanged only if you both continue, with family aware.</div>
+          <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="toast('Passed gently — bringing your next')">Not this one</button><button class="btn btn-gold btn-sm" onclick="go('matchflow')">Express interest</button></div>
+        </div>
+      </section>
+
+      <!-- D · MATCH FLOW -->
+      <section class="screen" id="matchflow">
+        <div class="screen-head"><button class="back" onclick="go('candidate')">‹</button><div><div class="ttl">Match flow</div><div class="sub">Phase 5 · a structured opening</div></div></div>
+        <div class="conv-banner fx d1">Interest is private. A decline is silent — never rejection. Only a mutual yes opens a conversation.</div>
+        <div class="card fx d2" style="padding:16px">
+          <div class="mf done"><div class="mn">٠</div><div><b>Both profiles complete</b><p>Intentions, values, tradition, character & verified identity.</p></div></div>
+          <div class="mf done"><div class="mn">١</div><div><b>Compatibility identified</b><p>Curated from values, conduct & shared tradition — never searched.</p></div></div>
+          <div class="mf cur"><div class="mn">٢</div><div><b>Mutual interest</b><p>You expressed interest. Awaiting Fatima — a silent decline stays dignified.</p><span class="cur-tag">● you are here</span></div></div>
+          <div class="mf"><div class="mn">٣</div><div><b>Structured opening</b><p>Raya frames the first exchange — no blank chat box.</p></div></div>
+          <div class="mf"><div class="mn">٤</div><div><b>Family / wali invited</b><p>Either may bring a wali — configurable, women-centric.</p></div></div>
+          <div class="mf"><div class="mn">٥</div><div><b>Supervised depth → decision</b><p>The eight pre-nikah topics open progressively.</p></div></div>
+        </div>
+        <button class="btn btn-gold fx d3" onclick="go('conversation')">Fatima said yes — open conversation →</button>
+      </section>
+
+      <!-- D · CONVERSATION -->
+      <section class="screen" id="conversation">
+        <div class="screen-head"><button class="back" onclick="go('matchflow')">‹</button><div><div class="ttl">Conversation</div><div class="sub">Phase 6 · with Fatima · guided by Raya</div></div></div>
+        <div style="text-align:center;margin-bottom:11px" class="fx d1"><span class="wali-chip">⚭ Wali present · Fatima's brother</span></div>
+        <div class="curriculum fx d2"><div class="ck">Pre-nikah topics · unlock as trust builds</div>
+          <div class="topic-line open"><div class="ti">✓</div>Parents & Family<span class="st">Explored</span></div>
+          <div class="topic-line open"><div class="ti">✓</div>Work & Provision<span class="st">Explored</span></div>
+          <div class="topic-line now"><div class="ti">●</div>Friends & Circle<span class="st">Now</span></div>
+          <div class="topic-line"><div class="ti">4</div>Bad Habits<span class="st">Locked</span></div>
+          <div class="topic-line"><div class="ti">5</div>Looks & Self-image<span class="st">Locked</span></div>
+          <div class="topic-line"><div class="ti">6</div>Responsibility<span class="st">Locked</span></div>
+          <div class="topic-line"><div class="ti">7</div>Expectations<span class="st">Locked</span></div>
+          <div class="topic-line"><div class="ti">8</div>Shared Finances<span class="st">Locked</span></div>
+          <div class="topic-line nikah"><div class="ti">۩</div>Intimacy & Closeness<span class="st">After nikah</span></div>
+        </div>
+        <div class="prompt-card fx d3"><div class="k">Raya · current topic: Friends & Circle</div><p>"Tell each other about the one friend who shaped you most."</p></div>
+        <div class="fx d4">
+          <div class="bubble me"><span class="who">You</span>My closest friend is from the masjid — he tells me the truth even when I don't want it.</div>
+          <div class="bubble her"><span class="who">Fatima</span>Loyalty to a fault is underrated. My circle is small but old.</div>
+        </div>
+        <div class="timer-note fx d4">Gentle response window ~24h · no limbo, no late-night pressure ⏳</div>
+        <button class="btn btn-gold btn-sm fx d5" style="margin-top:12px" onclick="go('decision')">Move toward a decision →</button>
+        <div class="vent-tag" style="margin-top:12px">In-app & watermarked · no media yet · a scholar-counsellor is one tap away.</div>
+      </section>
+
+      <!-- D · DECISION -->
+      <section class="screen" id="decision">
+        <div class="screen-head"><button class="back" onclick="go('conversation')">‹</button><div><div class="ttl">The decision</div><div class="sub">Phase 7 · proceed, pause, or close</div></div></div>
+        <p class="intro-p fx d1">No algorithm decides this — you do, with your family and your Lord.</p>
+        <div class="card fx d2" onclick="toast('Intent to proceed shared — families will be introduced')" style="cursor:pointer;border-color:var(--line)"><div class="card-k" style="color:var(--gold-soft)">Proceed</div><h3 style="font-size:19px">Toward a family introduction</h3><p>Raya helps coordinate a proper, family-present next step toward nikah.</p></div>
+        <div class="card fx d3" onclick="toast('Paused gently — return whenever ready')" style="cursor:pointer"><div class="card-k">Pause</div><h3 style="font-size:19px">Take time, without pressure</h3><p>Step back for reflection or istikhara. No clock, no guilt.</p></div>
+        <div class="card fx d4" onclick="toast('Closed with a dua — no rejection, no notification')" style="cursor:pointer"><div class="card-k" style="color:var(--rose)">Close</div><h3 style="font-size:19px">End with dignity</h3><p>A dua, a clean close. Both walk away whole.</p></div>
+      </section>
+
+      <!-- SUPPORT · SAFETY -->
+      <section class="screen" id="safety">
+        <div class="screen-head"><button class="back" onclick="go('home')">‹</button><div><div class="ttl">Safety & privacy</div><div class="sub">Built for women first</div></div></div>
+        <p class="intro-p fx d1">Encryption protects you from outsiders. These protect you from anyone <em style="font-style:italic;color:var(--gold-soft)">inside</em> who might mean harm.</p>
+        <div class="photo-demo fx d2"><div class="lockico">⊘</div><div style="font-size:12px;color:var(--ink-dim);font-weight:300;margin-top:8px">Photos stay hidden until you both choose</div><div class="wm">▢ WATERMARKED · VIEWER ID: AYMAN-7741 · TRACEABLE</div></div>
+        <div class="card fx d3" style="padding:16px 18px">
+          <div class="safe-row"><div class="si2">⛨</div><div><b>No public profiles, no search</b><p>You can't be browsed or scraped — nothing exists for a bad actor to collect.</p></div></div>
+          <div class="safe-row"><div class="si2">◉</div><div><b>Watermarks burned with viewer ID</b><p>A leaked photo traces straight back to the leaker.</p></div></div>
+          <div class="safe-row"><div class="si2">✓</div><div><b>Hard identity verification</b><p>A banned actor can't return under a new name.</p></div></div>
+          <div class="safe-row"><div class="si2">⚑</div><div><b>Report → human → permanent ban</b><p>One tap; a real person reviews; confirmed offenders gone for good.</p></div></div>
+        </div>
+        <button class="btn btn-ghost fx d4" onclick="toast('Report flow opened — a real person will review')">Report someone</button>
+      </section>
+
+      <!-- SUPPORT · COMMUNITY -->
+      <section class="screen" id="community">
+        <div class="screen-head"><button class="back" onclick="go('home')">‹</button><div><div class="ttl">Community</div><div class="sub">Optional · for its own sake</div></div></div>
+        <div class="conv-banner fx d1">Participation is <b>never scored</b>, never ranked, and <b>never feeds your matches</b>. It is belonging — nothing to perform.</div>
+        <div class="card fx d2"><div class="card-k" style="color:#9cc596">Gatherings near you</div><h3 style="font-size:19px">A Halaqah this Thursday</h3><p>Tafsir of Surah Ar-Rahman at the UEF hall, Chennai. Come because it benefits your heart — not because anyone is counting.</p><button class="btn btn-ghost btn-sm" style="margin-top:13px" onclick="toast('Noted — no points, just a reminder')">Remind me</button></div>
+        <div class="insight fx d3">"Uniting the community through action" means a thriving community — not a leaderboard for marriage.</div>
+      </section>
+
+      <!-- SUPPORT · VENT -->
+      <section class="screen" id="vent">
+        <div class="screen-head"><button class="back" onclick="go('home')">‹</button><div><div class="ttl">Vent Box</div><div class="sub">Support · private · with Raya</div></div></div>
+        <div class="vent-stream">
+          <div class="bubble ai"><span class="who">Raya</span>This is your space. The search can be heavy. Nothing here is judged, scored, or used in how you're matched.</div>
+          <div class="bubble me"><span class="who">You</span>Sometimes I worry I'm not good enough for any of this.</div>
+          <div class="bubble ai"><span class="who">Raya</span>That fear is human, and loud for many. You're not being ranked here. Want to sit with where it comes from?</div>
+        </div>
+        <div class="vent-tag">Never scored. Never shown to matches. If it grows heavy, Raya connects you to a scholar-counsellor.</div>
+      </section>
+
+    </div>
+
+    <!-- RAYA presence -->
+    <div class="raya-fab" id="rayaFab" onclick="openRaya()"><div class="raya-hint">Need help? <b>Raya's here.</b></div><div class="raya-orb">ر</div></div>
+    <div class="scrim" id="scrim" onclick="closeRaya()"></div>
+    <div class="raya-sheet" id="rayaSheet">
+      <div class="sheet-grab"></div>
+      <div class="sheet-head"><div class="sa">ر</div><div><b>Raya</b><span>● always here to help</span></div></div>
+      <div class="sheet-intro">Salaam. Stuck, unsure how to say something, want to speak instead, or just need a moment — I'm here. Nothing here you have to figure out alone.</div>
+      <div class="help-chip" onclick="helpReply('r1')"><span class="hc">☉</span>Help me with this step</div>
+      <div class="help-reply" id="r1">Forget the big words — just think of one married couple whose home feels peaceful to you. What about it would you want? That feeling <em>is</em> your answer. We'll shape it together.</div>
+      <div class="help-chip" onclick="helpReply('r2')"><span class="hc">?</span>Why are you asking me this?</div>
+      <div class="help-reply" id="r2">Knowing the <em>why</em> helps me understand the home you hope to build — so the people I show you fit your heart, not a checklist. Nothing here is judged.</div>
+      <div class="help-chip" onclick="helpReply('r3')"><span class="hc">⌥</span>Let me just speak instead</div>
+      <div class="help-reply" id="r3">Please do — talking is easier than typing. Speak in Urdu, Hindi, Tamil or English. I'll reflect it back so you know you were understood. <em>🎙 Listening…</em></div>
+      <div class="help-chip" onclick="helpReply('r4')"><span class="hc">◷</span>I just need a moment</div>
+      <div class="help-reply" id="r4">Take all the time you need. Your progress is saved — close this and come back tomorrow. The path waits for you, calmly.</div>
+    </div>
+  </div>
+
+  <!-- ===================== RIGHT RAIL ===================== -->
+  <aside class="rail-right" id="rightRail"></aside>
+
+</div>
+<div class="toast" id="toast"></div>
+<script>
+  /* high-level stage tracker (WHERE WE ARE) */
+  const STAGES=[{k:'A',l:'Open'},{k:'B',l:'Home'},{k:'C',l:'Ready'},{k:'D',l:'Match'},{k:'S',l:'Support'}];
+
+  /* left-rail flow list (grouped) */
+  const FLOW=[
+    {g:'A · Arrival'},
+    {id:'welcome',lt:'A',nm:'Raya welcomes',ds:'First face of the app · the hero moment'},
+    {id:'entry',lt:'A',nm:'Who are you here as',ds:'Seeker or wali · sets the driver'},
+    {id:'expect',lt:'A',nm:'What to expect',ds:'Disarm the fear before asking'},
+    {id:'kyc',lt:'A',nm:'Verify · KYC',ds:'Layered trust at the door'},
+    {id:'kyc2',lt:'A',nm:'Liveness check',ds:'The anti-catfish gate'},
+    {g:'B · The building'},
+    {id:'home',lt:'B',nm:'Journey overview',ds:'Matchmaking is the spine'},
+    {g:'C · Becoming ready'},
+    {id:'niyyah',lt:'C',nm:'Niyyah · intention',ds:'Why, before who'},
+    {id:'values',lt:'C',nm:'What you bring + maslak',ds:'Values & find-your-own tradition'},
+    {id:'mirror',lt:'C',nm:'The Mirror',ds:'Character through the 9 topics'},
+    {id:'portrait',lt:'C',nm:'Your portrait',ds:'Soft derived signals'},
+    {g:'D · Matching'},
+    {id:'pool',lt:'D',nm:'Considered few',ds:'Abundance of quality, no feed'},
+    {id:'candidate',lt:'D',nm:'A resonance',ds:'Character first, never a face'},
+    {id:'matchflow',lt:'D',nm:'Match flow',ds:'A structured opening'},
+    {id:'conversation',lt:'D',nm:'Communication',ds:'Topic by topic, with family'},
+    {id:'decision',lt:'D',nm:'The decision',ds:'People decide, not the algorithm'},
+    {g:'Support & safety'},
+    {id:'safety',lt:'S',nm:'Safety & privacy',ds:'Defend the insider threat'},
+    {id:'community',lt:'S',nm:'Community',ds:'Belonging, never a leaderboard'},
+    {id:'vent',lt:'S',nm:'Vent Box',ds:'The scaffolding, never the door'}
+  ];
+
+  const NOTES={
+    welcome:{stage:'A',eb:'A · Raya welcomes',h:'The first face of Sakinah is Raya, not a feature.',intro:'The screen that locks the emotional thesis into the user\u2019s head. The only screen where Raya appears alone \u2014 every screen after, she shares space with a module.',do:['Establish Raya visually \u2014 the breathing orb is her <b>presence</b>, not a logo.','Name the emotional thesis: <em>looking for a spouse can feel like being measured.</em> This is the line the whole product answers.','Hand the user gently inward \u2014 the first act is reflection, never a profile form.'],not:['No feature grid. No \u201cwhat Sakinah does.\u201d No tour.','No sign-up, no phone field. Nothing transactional yet.','Don\u2019t mention matches or candidates. It hasn\u2019t been earned.'],motion:'Orb breathes on a 5s cycle; copy fades up one line at a time; the CTA arrives last, unhurried.'},
+    entry:{stage:'A',eb:'A · Entry',h:'The first choice is who is holding the phone.',intro:'A respectful fork, not a gate. It decides whether the seeker or a wali drives \u2014 and that flag shapes permissions for the whole session.',do:['Set a <code>role</code> flag (seeker | wali) carried through the session.','Make both lanes feel equally first-class.','State plainly: consent always stays with the seeker.'],not:['Don\u2019t assume the user is the seeker.','Never let a wali proceed without the seeker\u2019s <code>consent_token</code>.','No sign-up form on this screen.'],motion:'Lanes rise in sequence; the crest settles before they appear.'},
+    expect:{stage:'A',eb:'A · Primer',h:'Disarm the fear before the first question.',intro:'The reserved user\u2019s loudest worry is \u201cwhat do they want from me.\u201d Answer it before asking anything \u2014 this is the cheapest retention lever in the whole flow.',do:['Four calm promises: never a blank page \u00b7 your pace \u00b7 speak don\u2019t type \u00b7 no wrong answers.','Make it skippable on return (<code>seen_primer</code>).','Keep the tone warm and unhurried.'],not:['No feature grid, no \u201chow it works\u201d tour.','Don\u2019t let it read like terms &amp; conditions.','Don\u2019t demand a tap for the first couple of seconds.'],motion:'Cards fade up a breath apart; nothing pulses for urgency.'},
+    kyc:{stage:'A',eb:'A · Verify',h:'Trust is earned at the door, in layers.',intro:'Verification is the price of a safe room \u2014 framed as protection, never as surveillance. One check can\u2019t cover identity, age, gender and catfishing at once.',do:['Phone OTP \u2192 Gov ID (Aadhaar offline-XML / DigiLocker; <code>store_raw_aadhaar=false</code>; PAN / passport / voter fallbacks).','Extract only name, age, gender, photo.','Tiered badges so a woman can gate contact to ID + photo-matched only.','Put the privacy reassurance at the point of capture.'],not:['Never store the raw Aadhaar number.','Never show ID data to a match.','Don\u2019t make it feel like a credit check or a background check.'],motion:'The tier bar fills as each step completes; the done row glows green softly.'},
+    kyc2:{stage:'A',eb:'A · Liveness',h:'Prove you are real \u2014 privately.',intro:'The anti-catfish gate. The promise \u201cno one but the system ever sees this\u201d is load-bearing: women and rural users hesitate to share a face.',do:['Passive/active liveness + 1:1 match to the ID photo.','Threshold gates the <code>photo_matched</code> badge.','Low scores \u2192 human-review queue, never a hard reject.','Keep the privacy promise visible on the capture screen.'],not:['Never surface the selfie anywhere in the product.','Don\u2019t hard-reject on a low score \u2014 review it.','Don\u2019t bury the reassurance in a policy page.'],motion:'The dashed orb turns solid green on success; badges pop in sequence.'},
+    home:{stage:'B',eb:'B · The building',h:'Matchmaking is the spine; everything else is a room off the hall.',intro:'The home screen is the 7-phase journey. Wellbeing and community sit beneath it as optional support \u2014 never the front door. This is the correction of the v1 over-rotation.',do:['Show the phase position prominently; the journey card dominates.','Demote Vent Box and community to support cards near the bottom.','Surface tradition + verified status as quiet trust signals.'],not:['Never lead with the Vent Box (the v1 mistake).','No swipe feed, no \u201csee who liked you,\u201d no infinite scroll.','Don\u2019t turn readiness into a public score to chase.'],motion:'The journey rail draws top-to-bottom; the current node pulses gently.'},
+    niyyah:{stage:'C',eb:'C · Niyyah',h:'Why, before who.',intro:'The first reflection. It sets the seriousness of everything after. The depth begins here \u2014 and the comfort layer must keep it from becoming a wall.',do:['Choice-first; Raya frames the question with an example.','\u201cI\u2019m not sure\u201d \u2192 a concrete reframe (\u201ca couple you admire\u2026\u201d).','Offer voice; allow skip-and-return.'],not:['Don\u2019t demand free text.','No abstract self-labeling without a concrete fallback.','Don\u2019t gate harshly \u2014 this is a mirror, not an exam.'],motion:'Raya\u2019s line types in; the choices rise after she finishes.'},
+    values:{stage:'C',eb:'C · What you bring',h:'Ask what they offer \u2014 then who they are.',intro:'The reframe: the values you bring, not just what you want. Plus self-declared maslak as a find-your-own mechanic, and marital status where divorcee &amp; widow are first-class.',do:['Self-declare <em>your own</em> tradition + a comfort spectrum (must-share \u2192 open-within \u2192 open-to-all).','Silently curate on non-overlap; show the dignity note.','Treat never-married, divorced and widowed as equal paths.'],not:['Never a \u201cno Shia / no Sunni\u201d exclusion UI.','Never rank or validate one tradition over another.','Never tell anyone they were filtered out for who they are.','No caste / biradari / complexion filters \u2014 ever.'],motion:'The spectrum segment slides; the gentle-note fades in beneath it.'},
+    mirror:{stage:'C',eb:'C · The Mirror',h:'Character, read through gratitude.',intro:'Nine either-or reflections become derived signals. This is the answer to every competitor\u2019s \u201cshallow algorithm,\u201d and the engine of the whole match.',do:['Either-or across the 9 dimensions; read a <b>value</b>, not a preference.','Keep raw answers private \u2014 never shown to anyone.','The 9th (closeness) shapes the private portrait only.','Carry the comfort mechanics on every step.'],not:['No personality \u201cscore,\u201d no compatibility %.','Never expose a raw answer.','Intimacy is never a chat topic before nikah.'],motion:'The question cross-fades between dimensions; progress ticks fill.'},
+    portrait:{stage:'C',eb:'C · Portrait',h:'You, reflected \u2014 softly.',intro:'Derived signals, withdrawable at any time. Standing here comes from verification, not from displayed worship.',do:['Show soft, qualitative signals (High / Growing / Strong).','Let the user withdraw any signal anytime.','Frame verification \u2014 not participation \u2014 as the trust source.'],not:['No public reputation score.','No community-participation boost to matches (that is the riya engine).','No raw answers surfaced.'],motion:'The aura breathes; meters fill left-to-right once.'},
+    pool:{stage:'D',eb:'D · The considered few',h:'Abundance of quality, scarcity of noise.',intro:'The fix to the one-a-day dead end. A small curated pool, refreshed as you act \u2014 a pass brings the next, never a void.',do:['Show ~3\u20135 to consider; a pass surfaces the next after a reflective beat.','Cap <b>active</b> conversations at one or two.','Flex cadence with density; show an honest empty state in a thin pool.'],not:['No infinite feed, no swipe gesture, no \u201csee who liked you.\u201d','Don\u2019t fake abundance when the pool is thin.','Don\u2019t reward bingeing.'],motion:'Cards stagger in; a pass slides one out and eases the next up.'},
+    candidate:{stage:'D',eb:'D · A resonance',h:'Character first, never a face.',intro:'A portrait, the shared signals, and the tradition match \u2014 the differentiation no swipe app can copy.',do:['Lead with shared values, the honest shared edge, and tradition match.','No photo until mutual interest, with family aware.','A decline is silent and dignified.'],not:['No photo-first, no public profile, no swipe.','Never frame a pass as rejection of the other person.'],motion:'The card lifts on enter; resonance dots light in sequence.'},
+    matchflow:{stage:'D',eb:'D · Match flow',h:'A structured opening \u2014 not a chat request.',intro:'Six gated stages once compatibility is identified. Interest stays private; a decline is silent; the first exchange is guided, never a blank box. (Doc \u00a78.)',do:['Private interest \u2192 mutual-yes required to proceed.','Raya frames the opening around a shared value.','A wali is invitable; supervision where required.'],not:['No open chat box, no casual / dating-style interaction.','No uncontrolled escalation.','Never tell someone they were declined.'],motion:'The stage rail glows at the current step; completed stages fill gold.'},
+    conversation:{stage:'D',eb:'D · Communication',h:'Topic by topic, with family in the room.',intro:'Eight pre-nikah topics unlock progressively; intimacy waits for after nikah. This solves ghosting and khalwa-sensitivity in one mechanic. (Doc \u00a79.)',do:['Topic-unlock curriculum; wali present; ~24h response windows.','In-app, watermarked; a scholar-counsellor one tap away.','Raya moderates tone and offers prompts.'],not:['No media before the gated stage; no contact-info leak.','No late-night pressure or read-receipt games.','Intimacy never opens before nikah.','The AI never decides the outcome.'],motion:'Topics unlock with a slide; locked rows stay dimmed; a prompt card fades in per topic.'},
+    decision:{stage:'D',eb:'D · The decision',h:'People decide. Never the algorithm.',intro:'Three dignified exits: proceed toward family introduction, pause for istikhara, or close cleanly.',do:['Proceed \u2192 coordinate a family-present next step.','Pause \u2192 no clock, no guilt.','Close \u2192 a dua, no \u201crejected\u201d framing, no notification of blame.'],not:['The AI must not recommend an outcome.','No pressure to proceed; no blame on a close.'],motion:'The three cards breathe gently; a close fades softly, never slams.'},
+    safety:{stage:'S',eb:'Support · Safety',h:'Defend against the authorized bad actor.',intro:'Encryption stops outsiders; this stops the insider \u2014 the Bulli Bai / Sulli Deals threat. This is the single biggest trust gate for women and their families.',do:['No public profiles, no search / enumeration to scrape.','Watermark photos with the <b>viewer\u2019s</b> ID burned in \u2014 leaks become traceable.','Hard KYC so a banned actor can\u2019t return.','Report \u2192 human review \u2192 permanent identity ban.'],not:['Don\u2019t rely on encryption alone \u2014 it doesn\u2019t touch screenshots.','Don\u2019t expose any browsable surface.','Don\u2019t let a banned identity re-register.'],motion:'The watermark line subtly shimmers to signal \u201clive &amp; traceable.\u201d'},
+    community:{stage:'S',eb:'Support · Community',h:'Belonging \u2014 never a leaderboard.',intro:'Optional gatherings, fully decoupled from matching. \u201cUniting the community through action\u201d means a thriving community, not eligibility points.',do:['Show gatherings; state plainly: never scored, never feeds matches.','Let people participate purely for its own sake.'],not:['No points, no rank, no visible boost to matches (the riya engine).','Never make participation a gate to anything.'],motion:'Calm. No progress bars, no celebratory animation.'},
+    vent:{stage:'S',eb:'Support · Vent Box',h:'A safe ear \u2014 the scaffolding, never the door.',intro:'A private Raya confidant with gentle escalation to a scholar-counsellor. It keeps the search dignified \u2014 present everywhere, the front door nowhere.',do:['Keep it private; never scored, shown to matches, or used in matching.','Escalate gently to a scholar-counsellor when the weight grows.'],not:['Never make it the home screen (the v1 mistake).','Don\u2019t store vents against the user.','Don\u2019t frame it as \u201ctherapy\u201d \u2014 the stigma will cost you.'],motion:'Bubbles ease in; the orb pulses warmly.'}
+  };
+
+  function renderStages(){
+    let html='';
+    FLOW.forEach(f=>{
+      if(f.g){html+='<div class="st-group">'+f.g+'</div>';}
+      else{html+='<div class="st-item" data-id="'+f.id+'" onclick="go(\''+f.id+'\')"><div class="lt">'+f.lt+'</div><div class="stx"><div class="nm">'+f.nm+'</div><div class="ds">'+f.ds+'</div></div></div>';}
+    });
+    document.getElementById('stageList').innerHTML=html;
+  }
+  function renderRight(id){
+    const n=NOTES[id]; if(!n)return;
+    let where='<div class="where"><div class="wk">Where we are</div><div class="wtrack">';
+    STAGES.forEach((s,i)=>{where+='<span class="wstep'+(s.k===n.stage?' on':'')+'">'+s.k+' \u00b7 '+s.l+'</span>'+(i<STAGES.length-1?'<span class="warrow">\u2192</span>':'');});
+    where+='</div></div>';
+    let doList=n.do.map(x=>'<div class="rr-li"><span class="bb">\u2713</span><div>'+x+'</div></div>').join('');
+    let notList=n.not.map(x=>'<div class="rr-li"><span class="bb">\u2715</span><div>'+x+'</div></div>').join('');
+    document.getElementById('rightRail').innerHTML=
+      '<div class="rr-tag">'+n.eb+'</div>'+
+      '<div class="rr-head">'+n.h+'</div>'+
+      '<div class="rr-intro">'+n.intro+'</div>'+
+      where+
+      '<div class="rr-sec"><h4>What this screen must do</h4>'+doList+'</div>'+
+      '<div class="rr-sec not"><h4>What this screen must not do</h4>'+notList+'</div>'+
+      '<div class="rr-sec"><h4>Motion notes</h4><div class="rr-motion">'+n.motion+'</div></div>';
+    document.querySelectorAll('.st-item').forEach(s=>s.classList.toggle('on',s.dataset.id===id));
+  }
+  function show(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const el=document.getElementById(id);el.classList.add('active');el.scrollTop=0;
+    el.querySelectorAll('.fx').forEach(n=>{n.style.animation='none';void n.offsetWidth;n.style.animation='';});
+    renderRight(id);
+  }
+  function go(id){show(id);closeRaya();}
+  function pick(el){el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+  function seg(el){el.parentElement.querySelectorAll('.seg').forEach(s=>s.classList.remove('sel'));el.classList.add('sel');}
+  function verifyDone(){document.getElementById('kycResult').style.display='block';document.getElementById('capBtn').style.display='none';const s=document.getElementById('selfieAura');s.textContent='\u2713';s.style.color='#9cc596';s.style.borderStyle='solid';s.style.borderColor='rgba(127,176,122,.4)';}
+  const questions=[
+    {dim:'Parents & Family',q:'When you picture a hard week, where does your gratitude land first?',a:'Find peace in calling your parents \u2014 their voice steadies you',b:'Find peace in solitude first, then reach out once settled'},
+    {dim:'Work & Provision',q:'Which feels more like a blessing?',a:'Work that gives me time for those I love',b:'Work that lets me build and provide generously'},
+    {dim:'Friends & Circle',q:'You feel most grateful for a friend who\u2026',a:'Tells you the truth, even when it stings',b:'Stands by you, even when you are wrong'},
+    {dim:'Bad Habits',q:'The habit you are most grateful to be unlearning\u2026',a:'Speaking before listening',b:'Withdrawing before explaining'},
+    {dim:'Looks & Self-image',q:'You feel most at peace when\u2026',a:'Content, unbothered by appearances',b:'Put-together and presentable'},
+    {dim:'Responsibility',q:'A home feels secure when\u2026',a:'Roles are clear and gently shared',b:'Roles flex to whoever is strongest that day'},
+    {dim:'Expectations',q:'You are most grateful in a marriage that is\u2026',a:'Predictable, calm, dependable',b:'Evolving, surprising, growing'},
+    {dim:'Shared Finances',q:'You would feel most grateful in a home that is\u2026',a:'Careful and secure, saving for what matters',b:'Generous and open-handed, trusting in rizq'},
+    {dim:'Closeness (private only)',q:'Closeness is built mostly through\u2026',a:'Shared silence and quiet presence',b:'Shared words and open expression'}
+  ];
+  let qi=0;
+  function nextQ(){
+    qi++;const prog=document.querySelectorAll('#mprog span');
+    if(qi>=questions.length){toast('Reflection complete \u2014 your portrait is ready');qi=0;prog.forEach((s,i)=>s.classList.toggle('on',i===0));setQ(0);setTimeout(()=>go('portrait'),700);return;}
+    prog.forEach((s,i)=>s.classList.toggle('on',i<=qi));
+    const qt=document.getElementById('qText');qt.style.opacity=0;
+    setTimeout(()=>{setQ(qi);qt.style.opacity=1;},160);
+  }
+  function setQ(i){const Q=questions[i];document.getElementById('dimTag').textContent=(i+1)+' of 9 \u00b7 '+Q.dim;document.getElementById('qText').textContent=Q.q;document.getElementById('optA').textContent=Q.a;document.getElementById('optB').textContent=Q.b;}
+  function openRaya(){document.getElementById('scrim').classList.add('show');document.getElementById('rayaSheet').classList.add('show');}
+  function closeRaya(){document.getElementById('scrim').classList.remove('show');document.getElementById('rayaSheet').classList.remove('show');document.querySelectorAll('.help-reply').forEach(r=>r.classList.remove('show'));}
+  function helpReply(id){document.querySelectorAll('.help-reply').forEach(r=>{if(r.id!==id)r.classList.remove('show')});document.getElementById(id).classList.toggle('show');}
+  setTimeout(()=>document.getElementById('rayaFab').classList.add('collapsed'),3400);
+  let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2600);}
+  renderStages();renderRight('welcome');
+</script>
+</body>
+</html>

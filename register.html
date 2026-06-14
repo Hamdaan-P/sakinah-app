@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sakinah · Verify</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── Design tokens — identical to index.html ── */
+  :root {
+    --bg:        #07090f;
+    --bg2:       #0b0f18;
+    --panel:     #111826;
+    --panel2:    #0f1521;
+    --line:      rgba(212,168,83,.16);
+    --line-soft: rgba(255,255,255,.06);
+    --gold:      #D4A853;
+    --gold-soft: #e7c984;
+    --gold-dim:  rgba(212,168,83,.55);
+    --ink:       #EDE7DA;
+    --ink-dim:   #9aa0ac;
+    --ink-faint: #5f6675;
+    --green:     #7FB07A;
+    --rose:      #C98A8A;
+    --r:         22px;
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; }
+
+  body {
+    background: radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), var(--bg);
+    color: var(--ink);
+    font-family: 'Manrope', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ══════════ LAYOUT ══════════ */
+  .layout { display:flex; height:100vh; }
+
+  /* ══════════ SIDEBAR — exact copy of index.html ══════════ */
+  .sidebar {
+    width: 312px;
+    flex-shrink: 0;
+    height: 100vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    border-right: 1px solid var(--line-soft);
+    padding: 40px 26px 70px;
+  }
+  .sidebar::-webkit-scrollbar { display:none; }
+
+  .rl-title { font-family:'Cormorant Garamond',serif; font-size:34px; font-weight:500; line-height:1.02; }
+  .rl-title sup { font-size:.5em; color:var(--gold); }
+  .rl-sub { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.24em; text-transform:uppercase; color:var(--gold); margin-top:8px; }
+  .rl-lede { font-family:'Cormorant Garamond',serif; font-style:italic; font-size:15px; color:var(--ink-dim); line-height:1.5; margin-top:16px; border-top:1px solid var(--line-soft); padding-top:16px; }
+
+  .thesis { border:1px solid var(--line); border-radius:16px; padding:18px; margin-top:22px; background:linear-gradient(160deg,rgba(212,168,83,.05),transparent); }
+  .thesis h4, .stages h4, .principles h4 { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); margin-bottom:12px; font-weight:500; }
+  .thesis p { font-family:'Cormorant Garamond',serif; font-size:18px; line-height:1.4; color:var(--ink); font-weight:400; }
+  .thesis p em { font-style:italic; color:var(--gold-soft); }
+
+  .stages { margin-top:26px; }
+  .st-group { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint); margin:16px 0 7px; padding-left:2px; }
+  .st-group:first-of-type { margin-top:6px; }
+  .st-item { display:flex; gap:12px; align-items:flex-start; padding:9px 11px; border-radius:11px; cursor:pointer; transition:.18s; margin-bottom:3px; }
+  .st-item:hover { background:rgba(212,168,83,.05); }
+  .st-item .lt { width:22px; height:22px; border-radius:6px; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ink-faint); flex-shrink:0; margin-top:1px; }
+  .st-item .stx .nm { font-size:13.5px; color:var(--ink-dim); font-weight:500; line-height:1.25; }
+  .st-item .stx .ds { font-size:11px; color:var(--ink-faint); font-weight:300; margin-top:2px; line-height:1.3; }
+  .st-item.on { background:rgba(212,168,83,.08); box-shadow:inset 0 0 0 1px var(--line); }
+  .st-item.on .lt { background:var(--gold); color:#0a0e15; border-color:var(--gold); }
+  .st-item.on .stx .nm { color:var(--gold-soft); }
+
+  .principles { margin-top:28px; border-top:1px solid var(--line-soft); padding-top:20px; }
+  .principle { display:flex; gap:10px; font-size:12.5px; color:var(--ink-dim); font-weight:300; line-height:1.5; margin-bottom:11px; }
+  .principle .pb { color:var(--gold); flex-shrink:0; }
+  .principle b { color:var(--ink); font-weight:600; }
+
+  /* ══════════ MAIN COLUMN ══════════ */
+  .main { flex:1; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+  /* ── Header: back nav + title + progress bar ── */
+  .reg-header {
+    flex-shrink: 0;
+    padding: 36px 56px 26px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .reg-nav { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+
+  .back-btn {
+    width: 34px; height:34px; border-radius:50%;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--gold);
+    font-size: 18px;
+    display: flex; align-items:center; justify-content:center;
+    cursor: pointer; flex-shrink:0; transition:.18s;
+    line-height: 1; padding-bottom:1px;
+  }
+  .back-btn:hover { background:rgba(212,168,83,.08); }
+  .back-btn.hidden { opacity:0; pointer-events:none; }
+
+  .reg-title { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:500; }
+  .reg-sub   { font-size:11px; color:var(--ink-faint); margin-top:3px; letter-spacing:.02em; }
+
+  /* ── Progress bar — uses .jnode/.jline visual language from reference ── */
+  .prog { display:flex; align-items:flex-start; max-width:500px; }
+
+  .prog-step { display:flex; flex-direction:column; align-items:center; gap:7px; flex-shrink:0; }
+
+  .prog-node {
+    width: 28px; height:28px; border-radius:50%;
+    border: 1px solid var(--line);
+    background: var(--panel2);
+    display: flex; align-items:center; justify-content:center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    transition: .25s;
+    z-index: 2;
+  }
+  .prog-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px; letter-spacing:.16em; text-transform:uppercase;
+    color: var(--ink-faint);
+    transition: .25s;
+    white-space: nowrap;
+  }
+  /* Connector line between nodes */
+  .prog-line {
+    flex: 1; height:1.5px;
+    background: var(--line-soft);
+    margin-top: 14px; /* vertically centers with node */
+    min-width: 44px;
+    transition: background .3s;
+  }
+
+  .prog-step.done .prog-node { background:var(--gold); color:#0a0e15; border-color:var(--gold); }
+  .prog-step.done .prog-label { color:var(--gold-dim); }
+  .prog-step.active .prog-node { border-color:var(--gold); color:var(--gold); background:var(--panel2); box-shadow:0 0 0 4px rgba(212,168,83,.12); }
+  .prog-step.active .prog-label { color:var(--gold); }
+  .prog-line.done { background:var(--gold-dim); }
+
+  /* ── Step body ── */
+  .reg-body {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 56px;
+  }
+  .reg-body::-webkit-scrollbar { display:none; }
+
+  /* ══════════ STEP PANELS ══════════ */
+  .step { display:none; width:100%; max-width:456px; }
+  .step.active { display:block; animation: rise .38s ease forwards; }
+  @keyframes rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+  /* ── Shared reference components ── */
+  /* .prim — from reference (exact copy) */
+  .prim { display:flex; gap:13px; align-items:flex-start; border:1px solid var(--line-soft); border-radius:15px; padding:15px; margin-bottom:10px; background:rgba(255,255,255,.012); }
+  .prim .pi { width:38px; height:38px; border-radius:12px; background:rgba(212,168,83,.07); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:18px; color:var(--gold); flex-shrink:0; }
+  .prim b { font-size:13.5px; display:block; margin-bottom:3px; }
+  .prim p { font-size:11.5px; color:var(--ink-dim); font-weight:300; line-height:1.5; margin:0; }
+
+  /* .chip — from reference (exact copy) */
+  .chip { border:1px solid var(--line-soft); border-radius:11px; padding:11px 14px; font-size:12.5px; cursor:pointer; transition:.2s; color:var(--ink-dim); }
+  .chip:hover { border-color:var(--gold); color:var(--ink); }
+  .chip.sel { border-color:var(--gold); background:rgba(212,168,83,.08); color:var(--ink); }
+
+  /* .insight — from reference (exact copy) */
+  .insight { font-size:11.5px; line-height:1.6; color:var(--ink-dim); font-weight:300; border-left:2px solid var(--gold); padding-left:13px; margin:13px 0; }
+  .insight b { color:#9cc596; }
+
+  /* .wali-chip — from reference (exact copy) */
+  .wali-chip { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--gold-soft); border:1px solid var(--line); border-radius:30px; padding:5px 12px; background:rgba(212,168,83,.05); }
+  .wali-chip.ok { color:var(--green); border-color:rgba(127,176,122,.25); background:rgba(127,176,122,.05); }
+
+  /* .btn — from reference (exact copy) */
+  .btn { display:block; width:100%; text-align:center; border:none; cursor:pointer; font-family:'Manrope',sans-serif; font-weight:600; font-size:14px; letter-spacing:.3px; padding:15px; border-radius:15px; transition:.22s; margin-top:6px; }
+  .btn-gold { background:linear-gradient(135deg,var(--gold),#b98b39); color:#0a0e15; }
+  .btn-gold:hover { filter:brightness(1.07); transform:translateY(-1px); }
+  .btn-ghost { background:transparent; border:1px solid var(--line); color:var(--gold-soft); }
+  .btn-ghost:hover { background:rgba(212,168,83,.06); }
+
+  /* ── Step-specific: field components ── */
+  .field-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing:.22em; text-transform:uppercase;
+    color: var(--gold-dim);
+    display: block; margin-bottom:9px;
+  }
+
+  .field-group {
+    display: flex;
+    border: 1px solid var(--line-soft);
+    border-radius: 13px;
+    overflow: hidden;
+    background: rgba(255,255,255,.018);
+    transition: border-color .2s, background .2s;
+    margin-bottom: 14px;
+  }
+  .field-group:focus-within { border-color:rgba(212,168,83,.4); background:rgba(212,168,83,.018); }
+
+  .field-prefix {
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace; font-size:13px;
+    color: var(--gold-soft);
+    border-right: 1px solid var(--line-soft);
+    background: rgba(212,168,83,.04);
+    flex-shrink: 0;
+    display: flex; align-items:center;
+  }
+  .field {
+    flex: 1; min-width:0;
+    background: transparent; border:none;
+    padding: 14px 16px;
+    font-family: 'Manrope', sans-serif; font-size:14px;
+    color: var(--ink);
+    outline: none;
+  }
+  .field::placeholder { color:var(--ink-faint); }
+
+  /* ── OTP boxes ── */
+  .otp-row { display:flex; gap:10px; justify-content:center; margin:20px 0 6px; }
+  .otp-box {
+    width: 54px; height:64px;
+    text-align: center;
+    background: rgba(255,255,255,.018);
+    border: 1px solid var(--line-soft);
+    border-radius: 13px;
+    font-family: 'Cormorant Garamond', serif; font-size:28px;
+    color: var(--ink);
+    outline: none; transition:.18s;
+    caret-color: var(--gold);
+  }
+  .otp-box:focus { border-color:rgba(212,168,83,.4); background:rgba(212,168,83,.018); }
+  .otp-box.filled { border-color:rgba(212,168,83,.35); color:var(--gold-soft); }
+
+  .resend-row { text-align:center; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-faint); margin:10px 0 4px; letter-spacing:.03em; }
+  .resend-link { color:var(--gold-dim); cursor:pointer; text-decoration:none; }
+  .resend-link:hover { color:var(--gold); }
+
+  /* ── Camera frame — matches .aura circle from reference, scaled for desktop ── */
+  .camera-frame {
+    width: 220px; height:220px;
+    border-radius: 50%;
+    border: 1.5px dashed var(--gold-dim);
+    overflow: hidden;
+    margin: 0 auto 22px;
+    background: radial-gradient(circle at 35% 30%, rgba(212,168,83,.08), transparent 55%),
+                radial-gradient(circle at 70% 75%, rgba(127,176,122,.06), transparent 55%),
+                var(--panel2);
+    position: relative;
+    display: flex; align-items:center; justify-content:center;
+    transition: border-color .4s, border-style .4s;
+    flex-shrink: 0;
+  }
+  .camera-frame video,
+  .camera-frame img  { width:100%; height:100%; object-fit:cover; display:none; }
+  .camera-idle { font-family:'Cormorant Garamond',serif; font-size:54px; color:var(--gold-dim); user-select:none; position:absolute; }
+  .camera-ok-ring {
+    position: absolute; inset:-8px; border-radius:50%;
+    border: 2px solid rgba(127,176,122,.5);
+    opacity: 0; transition: opacity .5s;
+    pointer-events: none;
+  }
+  .camera-frame.captured { border-color:rgba(127,176,122,.55); border-style:solid; }
+  .camera-frame.captured .camera-ok-ring { opacity:1; }
+
+  .camera-tip { font-size:11.5px; color:var(--ink-faint); font-weight:300; text-align:center; margin-bottom:18px; line-height:1.5; }
+  .camera-tip b { color:#9cc596; font-weight:500; }
+
+  /* ── ID chip grid ── */
+  .chip-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:12px 0; }
+  .chip-grid .chip { text-align:center; }
+
+  /* ── Upload zone — adapted from .photo-demo in reference ── */
+  .upload-zone {
+    border: 1px dashed var(--line);
+    border-radius: var(--r);
+    padding: 26px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .22s, background .22s;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,.012), rgba(255,255,255,.012) 8px, transparent 8px, transparent 18px);
+    margin: 4px 0 12px;
+    position: relative;
+  }
+  .upload-zone:hover,
+  .upload-zone.drag-over  { border-color:var(--gold); background:rgba(212,168,83,.03); }
+  .upload-zone.has-file   { border-color:rgba(127,176,122,.45); border-style:solid; background:rgba(127,176,122,.03); }
+  .upload-ico  { font-size:26px; color:var(--gold-dim); margin-bottom:9px; transition:.22s; }
+  .upload-zone.has-file .upload-ico { color:var(--green); }
+  .upload-hint { font-size:12px; color:var(--ink-faint); font-weight:300; line-height:1.55; }
+  .upload-hint b { color:var(--ink); font-weight:500; }
+  .upload-name { font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--green); margin-top:9px; display:none; word-break:break-all; }
+
+  /* ── Success success-badges row ── */
+  .badge-row { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:16px 0; }
+
+  /* ── Step meta note ── */
+  .step-note { font-size:11.5px; color:var(--ink-faint); font-weight:300; line-height:1.5; margin-top:10px; text-align:center; }
+  .step-note a { color:var(--gold-dim); cursor:pointer; }
+  .step-note a:hover { color:var(--gold); }
+
+  .section-q { font-family:'Cormorant Garamond',serif; font-size:18px; font-style:italic; color:var(--ink); line-height:1.35; margin-bottom:12px; }
+
+  /* Shake for failed validation */
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-7px)} 40%,80%{transform:translateX(7px)} }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ════════════════════ SIDEBAR ════════════════════ -->
+  <aside class="sidebar">
+    <div class="rl-title">Sakinah<sup>+</sup> · Shukr Mode</div>
+    <div class="rl-sub">Shukr Mode · The path to nikah</div>
+    <div class="rl-lede">From a Raya welcome to a dignified decision — every screen, with the why, the must-dos, and the lines we never cross.</div>
+
+    <div class="thesis">
+      <h4>The thesis we are building</h4>
+      <p>A matchmaking tool that begins with the <em>heart</em>, not a face. Raya hosts the journey; <em>compatibility is the byproduct</em> of becoming ready.</p>
+    </div>
+
+    <div class="stages">
+      <h4>The flow — click to walk it</h4>
+      <div class="st-group">A · Arrival</div>
+      <div class="st-item"><div class="lt">A</div><div class="stx"><div class="nm">Raya welcomes</div><div class="ds">First face of the app · the hero moment</div></div></div>
+      <div class="st-item"><div class="lt">A</div><div class="stx"><div class="nm">Who are you here as</div><div class="ds">Seeker or wali · sets the driver</div></div></div>
+      <div class="st-item"><div class="lt">A</div><div class="stx"><div class="nm">What to expect</div><div class="ds">Disarm the fear before asking</div></div></div>
+      <div class="st-item on" id="side-kyc"><div class="lt">A</div><div class="stx"><div class="nm">Verify · KYC</div><div class="ds">Layered trust at the door</div></div></div>
+      <div class="st-item" id="side-live"><div class="lt">A</div><div class="stx"><div class="nm">Liveness check</div><div class="ds">The anti-catfish gate</div></div></div>
+      <div class="st-group">B · The building</div>
+      <div class="st-item"><div class="lt">B</div><div class="stx"><div class="nm">Journey overview</div><div class="ds">Matchmaking is the spine</div></div></div>
+      <div class="st-group">C · Becoming ready</div>
+      <div class="st-item"><div class="lt">C</div><div class="stx"><div class="nm">Niyyah · intention</div><div class="ds">Why, before who</div></div></div>
+      <div class="st-item"><div class="lt">C</div><div class="stx"><div class="nm">What you bring + maslak</div><div class="ds">Values & find-your-own tradition</div></div></div>
+      <div class="st-item"><div class="lt">C</div><div class="stx"><div class="nm">The Mirror</div><div class="ds">Character through the 9 topics</div></div></div>
+      <div class="st-item"><div class="lt">C</div><div class="stx"><div class="nm">Your portrait</div><div class="ds">Soft derived signals</div></div></div>
+      <div class="st-group">D · Matching</div>
+      <div class="st-item"><div class="lt">D</div><div class="stx"><div class="nm">Considered few</div><div class="ds">Abundance of quality, no feed</div></div></div>
+      <div class="st-item"><div class="lt">D</div><div class="stx"><div class="nm">A resonance</div><div class="ds">Character first, never a face</div></div></div>
+      <div class="st-item"><div class="lt">D</div><div class="stx"><div class="nm">Match flow</div><div class="ds">A structured opening</div></div></div>
+      <div class="st-item"><div class="lt">D</div><div class="stx"><div class="nm">Communication</div><div class="ds">Topic by topic, with family</div></div></div>
+      <div class="st-item"><div class="lt">D</div><div class="stx"><div class="nm">The decision</div><div class="ds">People decide, not the algorithm</div></div></div>
+      <div class="st-group">Support & safety</div>
+      <div class="st-item"><div class="lt">S</div><div class="stx"><div class="nm">Safety & privacy</div><div class="ds">Defend the insider threat</div></div></div>
+      <div class="st-item"><div class="lt">S</div><div class="stx"><div class="nm">Community</div><div class="ds">Belonging, never a leaderboard</div></div></div>
+      <div class="st-item"><div class="lt">S</div><div class="stx"><div class="nm">Vent Box</div><div class="ds">The scaffolding, never the door</div></div></div>
+    </div>
+
+    <div class="principles">
+      <h4>Anchoring principles</h4>
+      <div class="principle"><span class="pb">۞</span><div><b>Matchmaking is the spine.</b> Wellbeing is scaffolding; community is soil. Never lead with the Vent Box.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Character before a face.</b> No swipe, no feed, no public profiles, no photo-first.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Find-your-own maslak.</b> The app takes no doctrinal stance; nobody is told they were filtered out for who they are.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>No riya engine.</b> Worship and gathering never feed matching or a public score.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Women-first safety.</b> Defend the authorized insider, not just the outsider.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Intimacy after nikah.</b> Never a pre-nikah chat topic.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Raya everywhere; consent always with the seeker.</b> A wali may steward, never decide.</div></div>
+      <div class="principle"><span class="pb">۞</span><div><b>Honesty over a bad match.</b> Cadence flexes with density. Launch concentrated (UEF · Chennai).</div></div>
+    </div>
+  </aside>
+
+  <!-- ════════════════════ MAIN ════════════════════ -->
+  <main class="main">
+
+    <!-- Header: nav + title + progress bar -->
+    <div class="reg-header">
+      <div class="reg-nav">
+        <button class="back-btn hidden" id="backBtn" onclick="prevStep()">‹</button>
+        <div>
+          <div class="reg-title" id="stepTitle">Let's verify you</div>
+          <div class="reg-sub"  id="stepSub">So this stays a safe, real space · Phase A · Arrival</div>
+        </div>
+      </div>
+
+      <!-- 4-node progress bar matching the journey-rail node style -->
+      <div class="prog">
+        <div class="prog-step active" id="ps1">
+          <div class="prog-node" id="pn1">1</div>
+          <div class="prog-label">Phone</div>
+        </div>
+        <div class="prog-line" id="pl1"></div>
+        <div class="prog-step" id="ps2">
+          <div class="prog-node" id="pn2">2</div>
+          <div class="prog-label">OTP</div>
+        </div>
+        <div class="prog-line" id="pl2"></div>
+        <div class="prog-step" id="ps3">
+          <div class="prog-node" id="pn3">3</div>
+          <div class="prog-label">Selfie</div>
+        </div>
+        <div class="prog-line" id="pl3"></div>
+        <div class="prog-step" id="ps4">
+          <div class="prog-node" id="pn4">4</div>
+          <div class="prog-label">Identity</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step panels -->
+    <div class="reg-body">
+
+      <!-- ───────── STEP 1 · Phone number ───────── -->
+      <div class="step active" id="step1">
+        <label class="field-label" for="phoneField">Your phone number</label>
+        <div class="field-group">
+          <div class="field-prefix">+91</div>
+          <input class="field" id="phoneField" type="tel" placeholder="00000 00000" maxlength="10" inputmode="numeric" autocomplete="tel">
+        </div>
+        <div class="insight">We'll send a 6-digit code to confirm this number is yours. <b>Never shared with a match, ever.</b></div>
+        <button class="btn btn-gold" onclick="sendOtp()">Send OTP →</button>
+        <div class="step-note">By continuing you agree to our <a>Privacy Policy</a>. No marketing, no spam.</div>
+      </div>
+
+      <!-- ───────── STEP 2 · OTP verification ───────── -->
+      <div class="step" id="step2">
+        <div class="section-q">Enter the 6-digit code</div>
+        <div class="step-note" style="text-align:left;margin-top:0;margin-bottom:2px">
+          Sent to <span id="phoneMasked"></span> · <a onclick="goTo(1)">Edit number</a>
+        </div>
+        <div class="otp-row" id="otpRow">
+          <input class="otp-box" type="tel" maxlength="1" inputmode="numeric">
+          <input class="otp-box" type="tel" maxlength="1" inputmode="numeric">
+          <input class="otp-box" type="tel" maxlength="1" inputmode="numeric">
+          <input class="otp-box" type="tel" maxlength="1" inputmode="numeric">
+          <input class="otp-box" type="tel" maxlength="1" inputmode="numeric">
+          <input class="otp-box" type="tel" maxlength="1" inputmode="numeric">
+        </div>
+        <div class="resend-row" id="resendRow">Resend in <span id="resendCount">30</span>s</div>
+        <button class="btn btn-gold" onclick="verifyOtp()">Verify →</button>
+        <div class="step-note">Didn't get it? <a id="resendLink" style="display:none" onclick="resendOtp()">Resend now</a></div>
+      </div>
+
+      <!-- ───────── STEP 3 · Selfie / Liveness ───────── -->
+      <div class="step" id="step3">
+        <!-- Camera circle — matches .portrait .aura from reference, scaled up -->
+        <div class="camera-frame" id="cameraFrame">
+          <div class="camera-idle" id="camIdle">◉</div>
+          <video id="camVideo" autoplay playsinline muted></video>
+          <img  id="camSnap" alt="selfie">
+          <div class="camera-ok-ring"></div>
+        </div>
+        <div class="camera-tip">
+          Center your face and blink once — proves you're real and matches your ID.<br>
+          <b>No one but the system ever sees it.</b>
+        </div>
+        <button class="btn btn-gold" id="camBtn" onclick="handleCam()">Start camera →</button>
+        <button class="btn btn-ghost" id="retakeBtn" style="display:none;margin-top:8px" onclick="retake()">Retake</button>
+        <div class="insight" style="margin-top:14px">Your selfie is used only for a 1:1 liveness match against your ID photo. <b>Never stored, never surfaced.</b> A low score goes to human review — never a hard reject.</div>
+      </div>
+
+      <!-- ───────── STEP 4 · Government ID ───────── -->
+      <div class="step" id="step4">
+        <div class="section-q">Government ID — choose one</div>
+        <div class="chip-grid" id="idGrid">
+          <div class="chip sel" onclick="pickId(this)">Aadhaar · DigiLocker</div>
+          <div class="chip"     onclick="pickId(this)">Passport</div>
+          <div class="chip"     onclick="pickId(this)">PAN</div>
+          <div class="chip"     onclick="pickId(this)">Voter ID</div>
+        </div>
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileIn').click()">
+          <div class="upload-ico" id="uploadIco">⊕</div>
+          <div class="upload-hint"><b>Click to upload</b> or drag your document here<br>JPG, PNG or PDF · max 5 MB</div>
+          <div class="upload-name" id="uploadName"></div>
+        </div>
+        <input type="file" id="fileIn" accept="image/*,.pdf" style="display:none">
+        <div class="insight">We extract <b>name, age, and gender only</b>. Raw Aadhaar numbers are never stored. Your ID is never shown to a match — it keeps out fakes and makes bans permanent.</div>
+        <button class="btn btn-gold" onclick="finish()">Continue →</button>
+      </div>
+
+      <!-- ───────── STEP 5 · Verified ───────── -->
+      <div class="step" id="step5">
+        <div style="text-align:center;padding:8px 0 22px">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:48px;color:var(--gold);margin-bottom:8px;line-height:1">✓</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:500;margin-bottom:5px">You're verified</div>
+          <div style="font-size:13px;color:var(--ink-dim);font-weight:300">Identity confirmed. Your journey can begin.</div>
+        </div>
+        <!-- Confirmed rows — use .prim/.pi pattern from reference with green tint -->
+        <div class="prim" style="border-color:rgba(127,176,122,.25);background:rgba(127,176,122,.04)">
+          <div class="pi" style="color:var(--green);background:rgba(127,176,122,.08);border-color:rgba(127,176,122,.2)">✓</div>
+          <div><b>Phone confirmed</b><p id="confirmedPhone">+91 ••••• ••741 · OTP verified</p></div>
+        </div>
+        <div class="prim" style="border-color:rgba(127,176,122,.25);background:rgba(127,176,122,.04)">
+          <div class="pi" style="color:var(--green);background:rgba(127,176,122,.08);border-color:rgba(127,176,122,.2)">◉</div>
+          <div><b>Liveness passed</b><p>Real person confirmed · selfie discarded by system</p></div>
+        </div>
+        <div class="prim" style="border-color:rgba(127,176,122,.25);background:rgba(127,176,122,.04)">
+          <div class="pi" style="color:var(--green);background:rgba(127,176,122,.08);border-color:rgba(127,176,122,.2)">⊙</div>
+          <div><b>Identity verified</b><p id="confirmedId">Aadhaar · DigiLocker · minimised &amp; encrypted</p></div>
+        </div>
+        <div class="badge-row">
+          <span class="wali-chip ok">✓ Phone</span>
+          <span class="wali-chip ok">✓ ID verified</span>
+          <span class="wali-chip ok">✓ Photo-matched</span>
+        </div>
+        <button class="btn btn-gold" onclick="location.href='index.html'">Enter Sakinah →</button>
+      </div>
+
+    </div><!-- /reg-body -->
+  </main>
+
+</div><!-- /layout -->
+
+<script>
+  /* ── State ── */
+  let cur          = 1;
+  let stream       = null;
+  let captured     = false;
+  let resendTimer  = null;
+  let resendSecs   = 30;
+  let selectedId   = 'Aadhaar · DigiLocker';
+  let phoneRaw     = '';
+
+  /* ── Step metadata ── */
+  const META = {
+    1: { title:'Let\'s verify you',    sub:'So this stays a safe, real space · Phase A · Arrival',   side:'kyc'  },
+    2: { title:'Enter the code',       sub:'Confirm your phone · Phase A · Arrival',                  side:'kyc'  },
+    3: { title:'One quick look',       sub:'Liveness check · stays private · Phase A · Arrival',      side:'live' },
+    4: { title:'Verify your identity', sub:'Government ID · Phase A · Arrival',                       side:'kyc'  },
+    5: { title:'You\'re verified',     sub:'Identity confirmed · Phase A · Arrival',                   side:'kyc'  },
+  };
+
+  /* ── Navigation ── */
+  function goTo(n) {
+    if (cur === 3 && n !== 3) stopCam();
+    document.getElementById('step' + cur).classList.remove('active');
+    cur = n;
+    const el = document.getElementById('step' + n);
+    el.classList.add('active');
+    /* re-trigger animation */
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+
+    const m = META[n];
+    document.getElementById('stepTitle').textContent = m.title;
+    document.getElementById('stepSub').textContent   = m.sub;
+    document.getElementById('backBtn').classList.toggle('hidden', n <= 1);
+    updateProg(n);
+    updateSidebar(m.side);
+    if (n === 3 && !captured) beginCam();
+  }
+
+  function prevStep() { if (cur > 1) goTo(cur - 1); }
+
+  /* ── Progress bar ── */
+  function updateProg(step) {
+    for (let i = 1; i <= 4; i++) {
+      const ps = document.getElementById('ps' + i);
+      const pn = document.getElementById('pn' + i);
+      ps.classList.remove('done', 'active');
+      if (step > 4 || (step === 5 && i <= 4)) {
+        ps.classList.add('done'); pn.textContent = '✓';
+      } else if (i < step) {
+        ps.classList.add('done'); pn.textContent = '✓';
+      } else if (i === step) {
+        ps.classList.add('active'); pn.textContent = String(i);
+      } else {
+        pn.textContent = String(i);
+      }
+      if (i < 4) document.getElementById('pl' + i).classList.toggle('done', step > i || step === 5);
+    }
+  }
+
+  /* ── Sidebar ── */
+  function updateSidebar(key) {
+    document.getElementById('side-kyc').classList.toggle('on',  key === 'kyc');
+    document.getElementById('side-live').classList.toggle('on', key === 'live');
+  }
+
+  /* ── Step 1: Phone ── */
+  function sendOtp() {
+    const raw = document.getElementById('phoneField').value.replace(/\D/g, '');
+    if (raw.length < 10) { shake(document.querySelector('#step1 .field-group')); return; }
+    phoneRaw = raw;
+    const masked = '+91 ' + raw.slice(0,5).replace(/./g,'•') + ' ••' + raw.slice(-3);
+    document.getElementById('phoneMasked').textContent       = masked;
+    document.getElementById('confirmedPhone').textContent    = masked + ' · OTP verified';
+    startResend();
+    goTo(2);
+    setTimeout(() => document.querySelector('.otp-box').focus(), 180);
+  }
+
+  /* ── Step 2: OTP boxes ── */
+  const boxes = document.querySelectorAll('.otp-box');
+  boxes.forEach((box, i) => {
+    box.addEventListener('input', e => {
+      const v = e.target.value.replace(/\D/g, '');
+      box.value = v ? v.slice(-1) : '';
+      box.classList.toggle('filled', !!box.value);
+      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && i > 0) {
+        boxes[i - 1].value = '';
+        boxes[i - 1].classList.remove('filled');
+        boxes[i - 1].focus();
+      }
+    });
+    box.addEventListener('paste', e => {
+      e.preventDefault();
+      const digits = (e.clipboardData.getData('text') || '').replace(/\D/g,'').slice(0,6);
+      [...digits].forEach((d, j) => {
+        if (boxes[j]) { boxes[j].value = d; boxes[j].classList.add('filled'); }
+      });
+      boxes[Math.min(digits.length, 5)].focus();
+    });
+  });
+
+  function verifyOtp() {
+    const otp = [...boxes].map(b => b.value).join('');
+    if (otp.length < 6) { shake(document.getElementById('otpRow')); return; }
+    goTo(3);
+  }
+
+  function startResend() {
+    resendSecs = 30;
+    document.getElementById('resendLink').style.display = 'none';
+    document.getElementById('resendRow').style.display  = 'block';
+    clearInterval(resendTimer);
+    resendTimer = setInterval(() => {
+      resendSecs--;
+      document.getElementById('resendCount').textContent = resendSecs;
+      if (resendSecs <= 0) {
+        clearInterval(resendTimer);
+        document.getElementById('resendRow').style.display  = 'none';
+        document.getElementById('resendLink').style.display = 'inline';
+      }
+    }, 1000);
+  }
+
+  function resendOtp() {
+    startResend();
+    boxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+    boxes[0].focus();
+  }
+
+  /* ── Step 3: Camera ── */
+  async function beginCam() {
+    const video = document.getElementById('camVideo');
+    const idle  = document.getElementById('camIdle');
+    const btn   = document.getElementById('camBtn');
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode:'user', width:{ ideal:640 }, height:{ ideal:640 } }
+      });
+      video.srcObject = stream;
+      video.style.display = 'block';
+      idle.style.display  = 'none';
+      btn.textContent = 'Capture →';
+      btn.onclick = snap;
+    } catch {
+      idle.textContent = '⊗';
+      idle.style.color = 'var(--rose)';
+      btn.textContent  = 'Camera unavailable — retry';
+      btn.onclick = beginCam;
+    }
+  }
+
+  function handleCam() {
+    const btn = document.getElementById('camBtn');
+    if (btn.textContent === 'Start camera →') beginCam();
+    else snap();
+  }
+
+  function snap() {
+    const video  = document.getElementById('camVideo');
+    const snapEl = document.getElementById('camSnap');
+    const frame  = document.getElementById('cameraFrame');
+    const btn    = document.getElementById('camBtn');
+    const retake = document.getElementById('retakeBtn');
+    const canvas = document.createElement('canvas');
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 640;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    snapEl.src          = canvas.toDataURL('image/jpeg', .85);
+    snapEl.style.display = 'block';
+    video.style.display  = 'none';
+    frame.classList.add('captured');
+    captured = true;
+    stopCam();
+    btn.textContent = 'Continue →';
+    btn.onclick     = () => goTo(4);
+    retake.style.display = 'block';
+  }
+
+  function retake() {
+    const snapEl = document.getElementById('camSnap');
+    const frame  = document.getElementById('cameraFrame');
+    const btn    = document.getElementById('camBtn');
+    const retake = document.getElementById('retakeBtn');
+    const idle   = document.getElementById('camIdle');
+    snapEl.style.display = 'none';
+    frame.classList.remove('captured');
+    captured = false;
+    retake.style.display = 'none';
+    idle.style.display   = 'block';
+    btn.textContent = 'Start camera →';
+    btn.onclick     = handleCam;
+    beginCam();
+  }
+
+  function stopCam() {
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    document.getElementById('camVideo').srcObject = null;
+  }
+
+  /* ── Step 4: Gov ID ── */
+  function pickId(el) {
+    document.querySelectorAll('#idGrid .chip').forEach(c => c.classList.remove('sel'));
+    el.classList.add('sel');
+    selectedId = el.textContent.trim();
+  }
+
+  /* File input */
+  document.getElementById('fileIn').addEventListener('change', function () {
+    const f = this.files[0]; if (!f) return;
+    applyFile(f);
+  });
+
+  /* Drag & drop */
+  const dropZone = document.getElementById('dropZone');
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) { applyFile(f); const dt = new DataTransfer(); dt.items.add(f); document.getElementById('fileIn').files = dt.files; }
+  });
+
+  function applyFile(f) {
+    dropZone.classList.add('has-file');
+    document.getElementById('uploadIco').textContent  = '✓';
+    document.getElementById('uploadName').textContent = f.name;
+    document.getElementById('uploadName').style.display = 'block';
+  }
+
+  function finish() {
+    document.getElementById('confirmedId').textContent = selectedId + ' · minimised & encrypted';
+    goTo(5);
+  }
+
+  /* ── Shake for bad input ── */
+  function shake(el) {
+    el.style.animation = 'none'; void el.offsetWidth;
+    el.style.animation = 'shake .35s ease';
+  }
+</script>
+</body>
+</html>

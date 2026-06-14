@@ -1,0 +1,625 @@
+rules_version = '2';
+
+// Helper: A11 layer 2 — rule-level App Check check (belt-and-suspenders
+// for layer 1's Firebase Console "Enforced" toggle). When the Console
+// toggle is on, requests without App Check tokens are rejected at the
+// service edge BEFORE rules evaluate. This rule-level check provides the
+// same enforcement at the rules layer in case the Console toggle is
+// flipped off accidentally.
+//
+// Tested by `tests/rules/firestore.appcheck.test.ts` (raw HTTP against
+// the emulator REST API; @firebase/rules-unit-testing@5 has no App Check
+// API so the standard SDK-based tests can't simulate the token).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function appChecked() {
+      return request.app != null;
+    }
+
+    // ── DNZ wallet (server-only writes, App-Check-gated reads) ──
+    match /users/{userId}/dnz_balance/{doc} {
+      allow read: if appChecked() && request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+    match /users/{userId}/dnz_daily/{doc} {
+      allow read: if appChecked() && request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+    match /users/{userId}/dnz_transactions/{doc} {
+      allow read: if appChecked() && request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // ── Mining (server-only writes, App-Check-gated reads) ──────
+    match /users/{userId}/mining_devices/{doc} {
+      allow read: if appChecked() && request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+    match /users/{userId}/mining_sessions/{doc} {
+      allow read: if appChecked() && request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+    match /mining_sessions/{sessionId} {
+      allow read: if appChecked() && request.auth != null && resource.data.user_id == request.auth.uid;
+      allow write: if false;
+    }
+
+    // ── DNZ audit log (P1.11) ────────────────────────────────────
+    // Server-only immutable trail of every balance mutation. The Admin SDK
+    // bypasses these rules and writes inside transactions; client SDKs MUST
+    // NOT read or write this collection. Phase 5 will add admin reads via
+    // a server-side endpoint, not via direct Firestore client access.
+    match /dnz_audit/{auditId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    // ── audit_log: top-level server-only forensic trail ──────────
+    // Identity events (token_minted, token_consumed, link_created,
+    // unlink, otp_*) and action-tool invocations all write here. The
+    // Admin SDK bypasses these rules and writes; clients NEVER read or
+    // write. Surfacing per-user views is a future admin-API concern.
+    match /audit_log/{auditId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    // ── WhatsApp identity binding (server-only, Admin SDK only) ──
+    // whatsapp_links: phone (e164) → uid resolver. Webhook reads via
+    // Admin SDK; clients never touch it directly. Mirrors dnz_audit.
+    match /whatsapp_links/{phoneE164} {
+      allow read, write: if false;
+    }
+
+    // linking_tokens: single-use 24h tokens minted when a logged-in
+    // user taps the in-app WhatsApp linking CTA. Webhook consumes the
+    // token on first inbound. Server-only end-to-end.
+    match /linking_tokens/{token} {
+      allow read, write: if false;
+    }
+
+    // ── Users: profile + scoped subcollection writes ────────────
+    // Profile doc: owner can read fully; writes are field-restricted so
+    // clients cannot mutate server-controlled fields (wallet, KYC tier,
+    // admin/role, scores, cached counters).
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      allow create: if request.auth != null && request.auth.uid == userId
+        && !request.resource.data.keys().hasAny(
+          ['dnz_balance','score','role','admin',
+           'earnedToday','total_dnz_earned','messagesSent','connectionsCount',
+           'phone_e164']
+        );
+
+      allow update: if request.auth != null && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+          ['dnz_balance','score','role','admin',
+           'earnedToday','total_dnz_earned','messagesSent','connectionsCount',
+           'phone_e164']
+        );
+
+      allow delete: if false;
+
+      // Owner can read any subcollection document. Writes require an
+      // explicit match block — anything not listed is denied.
+      match /{document=**} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Chatbot conversations + messages (Raya chat history).
+      match /conversations/{coId} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+        match /messages/{messageId} {
+          allow write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+
+      // Mood logs.
+      match /moodLog/{doc} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Barakah Labs — heart check-ins. One doc per day, keyed by YYYY-MM-DD.
+      // Owner-only read/write. Server-side aggregations can use admin SDK.
+      match /heart_checkins/{day} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Barakah Labs — Tafakkur sessions. Auto-ID docs storing duration,
+      // seed, reflection, started/ended timestamps.
+      match /tafakkur_sessions/{sessionId} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Barakah Labs — Friday quiet reports. Owner reads; the backend
+      // writes via admin SDK after generation.
+      match /quiet_reports/{weekId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
+
+      // Barakah Labs — circle memberships (mirror of circles/{id}/members/{uid}).
+      // Owner reads to enumerate their circles. Writes happen when:
+      //   1. The user joins/leaves a circle themselves (self-write), OR
+      //   2. The circle's OWNER adds them by writing both the member doc
+      //      AND this mirror doc in a single batch.
+      match /circle_memberships/{circleId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && (
+          request.auth.uid == userId
+          || (
+            // Owner adding an invitee — they hold their own membership
+            // doc with role=owner that we can read for verification.
+            exists(/databases/$(database)/documents/users/$(request.auth.uid)/circle_memberships/$(circleId))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)/circle_memberships/$(circleId)).data.role == 'owner'
+          )
+        );
+      }
+
+      // Emotional / relationship profile docs (sub-docs under /profile).
+      match /profile/{doc} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // WhatsApp channel state per user (linked phone, voice preference,
+      // mute window). Server-only writes; owner reads link status from here.
+      match /whatsapp/{doc} {
+        allow read: if appChecked() && request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
+
+      // Reminders surfaced by the agent. Server writes, owner reads.
+      match /reminders/{reminderId} {
+        allow read: if appChecked() && request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
+
+      // Quran reading state (last-read position, bookmarks, hifz progress).
+      // Owner-only — synced from quranSyncService.ts to drive multi-device
+      // continuity. Schema: { snapshot: {...}, updatedAt: serverTimestamp }.
+      match /quranState/{doc} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // EIM (Ethical Investment Mentor) per-user state — portfolio + library
+      // progression snapshot, synced from eimSyncService.ts. Owner-only.
+      match /eimState/{doc} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Legacy DNZ restoration — pending investor credits keyed by email.
+    match /pending_dinar_credits/{emailKey} {
+      allow read, write: if false;
+    }
+
+    // ── Scholar research workbench ──────────────────────────────
+    match /research_articles/{articleId} {
+      allow read: if (resource.data.status == 'published')
+        || (request.auth != null && request.auth.uid == resource.data.authorUid);
+      allow create: if request.auth != null
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 200;
+      allow update: if request.auth != null
+        && resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorUid == resource.data.authorUid;
+      allow delete: if request.auth != null
+        && resource.data.authorUid == request.auth.uid;
+    }
+    match /scholar_profiles/{uid} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── Halaqah marketing / landing logs (append-only) ──────────
+    match /halaqah_share_events/{logId} {
+      allow create: if request.auth != null
+        && request.resource.data.sharedBy == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+    match /halaqah_landing_events/{logId} {
+      allow create: if request.resource.data.eventId is string
+        && request.resource.data.eventId.size() <= 64
+        && (request.resource.data.referrer == null || request.resource.data.referrer is string);
+      allow read, update, delete: if false;
+    }
+
+    // ── Hifz Circles ────────────────────────────────────────────
+    // Peer-accountability groups for Quran memorization. Circle ID is the
+    // 6-char invite code itself, so anyone who knows the code can find the
+    // circle and join. Membership is gated by writing to a sub-document.
+    match /hifz_circles/{circleId} {
+      // Anyone signed in can read a circle (preview before joining + live-call status).
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 60
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.memberCount == 1;
+
+      // Update covers liveCall toggles + memberCount adjustments. createdBy
+      // and name are pinned so they can't be hijacked.
+      allow update: if request.auth != null
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 60;
+
+      // Members subcollection — uid-keyed.
+      match /members/{memberUid} {
+        allow read: if request.auth != null;
+        allow create, update, delete: if request.auth != null
+          && request.auth.uid == memberUid;
+      }
+
+      // Check-ins — daily entries: { uid, date, ayahsRevised, note }
+      match /checkins/{checkinId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.date is string
+          && request.resource.data.ayahsRevised is number
+          && request.resource.data.ayahsRevised >= 0
+          && request.resource.data.ayahsRevised <= 200;
+        allow update, delete: if request.auth != null
+          && resource.data.uid == request.auth.uid;
+      }
+
+      // Notes — manual + AI-generated insights pinned to the circle.
+      match /notes/{noteId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.body is string
+          && request.resource.data.body.size() <= 4000;
+        // Anyone signed in may toggle pinned (collaborative). Author can edit body.
+        allow update: if request.auth != null;
+        allow delete: if request.auth != null
+          && resource.data.authorUid == request.auth.uid;
+      }
+    }
+
+    // ── Circle invites (out-of-band, recipient accepts to join) ───────
+    // Doc shape: { circleId, circleName, fromUid, fromName, toUid, createdAt }
+    // Inviter writes; recipient reads via realtime listener; accept = join + delete.
+    match /circle_invites/{inviteId} {
+      allow read: if request.auth != null
+        && (resource == null
+            || resource.data.toUid == request.auth.uid
+            || resource.data.fromUid == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid is string
+        && request.resource.data.circleId is string;
+      allow update: if false;
+      allow delete: if request.auth != null
+        && (resource.data.toUid == request.auth.uid
+            || resource.data.fromUid == request.auth.uid);
+    }
+
+    // Notifications — owner read/update/delete; created by Admin SDK only
+    match /notifications/{notifId} {
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if false;
+    }
+
+    // Feature usage analytics — authenticated users can write, no client reads
+    match /feature_usage/{docId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
+
+    // Shared chatbot conversations — publicly readable, only authed users can create
+    match /shared_conversations/{shareId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // Public profiles — anyone can read; only the owner can write their own mirror
+    match /public_profiles/{userId} {
+      allow read: if true;
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Slug reverse lookup (slug -> uid). Public read for /p/:slug resolution.
+    match /slugs/{slug} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // ── Direct messages between two users ───────────────────────
+    // convId format: `${userA}_${userB}` (lex-sorted). participantUids is the
+    // canonical membership list — rules use it to gate reads + writes,
+    // including on the messages subcollection (via get() on the parent).
+    match /conversations/{convId} {
+      allow read: if request.auth != null
+        && (resource == null
+            || request.auth.uid in resource.data.participantUids);
+
+      allow create: if request.auth != null
+        && request.resource.data.participantUids is list
+        && request.resource.data.participantUids.size() == 2
+        && request.auth.uid in request.resource.data.participantUids
+        && request.resource.data.participantUids[0] < request.resource.data.participantUids[1]
+        && convId == request.resource.data.participantUids[0] + '_' + request.resource.data.participantUids[1];
+
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.participantUids
+        && request.resource.data.participantUids == resource.data.participantUids;
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participantUids;
+
+        allow create: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participantUids
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() < 8000;
+
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Barakah Labs Tohfas (gift letters) ──────────────────────
+    // Separate from /conversations: Tohfas are a one-way gift channel and
+    // must not appear in either party's /messages inbox. Doc id is auto.
+    //
+    // Read:    sender + recipient only.
+    // Create:  any authed user can send (must be the sender and not to
+    //          themselves; letter required, recipientId required).
+    // Update:  recipient only, and only to flip `kept` from false → true.
+    //          Sender cannot edit a sent Tohfa.
+    // Delete:  never.
+    match /tohfas/{tohfaId} {
+      allow read: if request.auth != null
+        && (resource == null
+            || request.auth.uid == resource.data.senderId
+            || request.auth.uid == resource.data.recipientId);
+
+      allow create: if request.auth != null
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.recipientId is string
+        && request.resource.data.recipientId.size() > 0
+        && request.resource.data.recipientId != request.auth.uid
+        && request.resource.data.letter is string
+        && request.resource.data.letter.size() > 0
+        && request.resource.data.letter.size() < 8000
+        && request.resource.data.kept == false;
+
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.recipientId
+        && request.resource.data.senderId == resource.data.senderId
+        && request.resource.data.recipientId == resource.data.recipientId
+        && request.resource.data.letter == resource.data.letter
+        && request.resource.data.kept == true;
+
+      allow delete: if false;
+    }
+
+    // ── Barakah Labs public wisdom feed ─────────────────────────
+    // `public_blessings` holds noticings the user EXPLICITLY shared via
+    // the S03 "Share with the community" toggle. Writes (publish, like,
+    // comment) go through the FastAPI backend using the Admin SDK, which
+    // bypasses these rules; the only thing the client does directly is
+    // READ the feed for the S17 wisdom rotator + ranked list.
+    //
+    // Read:   any authed user (the whole point is community visibility).
+    // Write:  server-only — clients never write here directly.
+    match /public_blessings/{blessingId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ── Connection requests + edges ─────────────────────────────
+    // Document ID is `${userA}_${userB}` where userA < userB lexicographically.
+    // Status transitions: pending → accepted | declined | removed; accepted → removed.
+    match /connections/{pairKey} {
+      allow read: if request.auth != null
+        && (resource == null
+            || resource.data.userA == request.auth.uid
+            || resource.data.userB == request.auth.uid);
+
+      allow create: if request.auth != null
+        && request.resource.data.userA is string
+        && request.resource.data.userB is string
+        && request.resource.data.userA != request.resource.data.userB
+        && request.resource.data.userA < request.resource.data.userB
+        && pairKey == request.resource.data.userA + '_' + request.resource.data.userB
+        && (request.resource.data.userA == request.auth.uid
+            || request.resource.data.userB == request.auth.uid)
+        && request.resource.data.requestedBy == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      allow update: if request.auth != null
+        && (resource.data.userA == request.auth.uid
+            || resource.data.userB == request.auth.uid)
+        && request.resource.data.userA == resource.data.userA
+        && request.resource.data.userB == resource.data.userB
+        && request.resource.data.requestedBy == resource.data.requestedBy
+        && (
+          // Recipient accepts/declines a pending request
+          (resource.data.status == 'pending'
+           && resource.data.requestedBy != request.auth.uid
+           && (request.resource.data.status == 'accepted'
+               || request.resource.data.status == 'declined'))
+          // Requester cancels their own pending request
+          || (resource.data.status == 'pending'
+              && resource.data.requestedBy == request.auth.uid
+              && request.resource.data.status == 'removed')
+          // Either party disconnects an accepted connection
+          || (resource.data.status == 'accepted'
+              && request.resource.data.status == 'removed')
+        );
+
+      allow delete: if false;
+    }
+
+    // =====================================================================
+    // BARAKAH LABS — PRESENCE (heartbeat for "X are noticing right now")
+    //
+    // Each authenticated user writes their own doc with a server timestamp.
+    // Reads are aggregate-only: the client uses ``getCountFromServer`` over
+    // ``where('lastSeen', '>=', cutoff)`` which is permitted by the same
+    // read rule (an aggregation read is treated as a list-read on the
+    // matching docs). No identifying info is stored — just uid as doc id
+    // and the timestamp.
+    // =====================================================================
+    match /barakah_presence/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastSeen']);
+    }
+
+    // =====================================================================
+    // BARAKAH LABS — SHARE TOKENS (read-only links for quiet reports)
+    //
+    // Backend creates / revokes via admin SDK. Client can only READ a
+    // token if they're the creator (used for the future revoke-list UI).
+    // =====================================================================
+    match /share_tokens/{tokenId} {
+      allow read: if request.auth != null
+        && resource.data.createdBy == request.auth.uid;
+      allow write: if false;
+    }
+
+    // =====================================================================
+    // BARAKAH LABS — CIRCLES
+    //
+    // Private group threads. Membership is authoritative at
+    //   /users/{uid}/circle_memberships/{circleId}
+    // existence — if a user has that doc, they're a member.
+    //
+    // Schema reminder:
+    //   circles/{circleId}                                — metadata
+    //     /members/{uid}                                  — directory
+    //     /posts/{postId}                                 — noticings
+    //       /replies/{replyId}                            — replies
+    // =====================================================================
+
+    function isCircleMember(circleId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/circle_memberships/$(circleId));
+    }
+
+    function isCircleOwner(circleId) {
+      return isCircleMember(circleId)
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)/circle_memberships/$(circleId)).data.role == 'owner';
+    }
+
+    match /circles/{circleId} {
+      // Member can read the metadata. Anyone authenticated can create.
+      allow read: if isCircleMember(circleId);
+
+      allow create: if request.auth != null
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 80;
+
+      // Only owner can update name. memberCount + lastActivityAt are
+      // bumped by any member as a side-effect of posting / joining /
+      // leaving — allow those field-only updates.
+      allow update: if isCircleMember(circleId)
+        && (
+          // Member-side bumps (any member, only these fields change)
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['memberCount', 'lastActivityAt'])
+          // Owner-side full updates
+          || isCircleOwner(circleId)
+        );
+
+      allow delete: if false;
+
+      // Members directory.
+      match /members/{memberUid} {
+        allow read: if isCircleMember(circleId);
+        // A user can write their own member doc (= self-join) OR the
+        // circle's owner can write any member doc (= owner invites + admin).
+        allow write: if request.auth != null && (
+          request.auth.uid == memberUid
+          || isCircleOwner(circleId)
+        );
+      }
+
+      // Posts (noticings shared inside the circle).
+      match /posts/{postId} {
+        allow read: if isCircleMember(circleId);
+
+        allow create: if isCircleMember(circleId)
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 4000;
+
+        allow update: if isCircleMember(circleId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['replyCount']);
+
+        allow delete: if isCircleMember(circleId)
+          && resource.data.authorUid == request.auth.uid;
+
+        // Replies inside a post.
+        match /replies/{replyId} {
+          allow read: if isCircleMember(circleId);
+
+          allow create: if isCircleMember(circleId)
+            && request.resource.data.authorUid == request.auth.uid
+            && request.resource.data.text is string
+            && request.resource.data.text.size() <= 2000;
+
+          allow delete: if isCircleMember(circleId)
+            && resource.data.authorUid == request.auth.uid;
+        }
+      }
+    }
+
+    // ── Sakinah: profiles (backend writes only for sensitive fields) ──
+    // Clients can read their own profile. Only backend (Admin SDK) writes
+    // is_verified, is_matchable. Client can write basic profile fields only.
+    match /sakinah_profiles/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && !request.resource.data.keys().hasAny(['is_verified', 'is_matchable']);
+      allow update: if request.auth != null && request.auth.uid == uid
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['is_verified', 'is_matchable']);
+      allow delete: if false;
+    }
+
+    // ── Sakinah: signals (backend writes only, never client) ──
+    // Interest and pass signals are private and server-authoritative.
+    // A declined interest is NEVER visible to the other person.
+    match /sakinah_signals/{signalId} {
+      allow read: if request.auth != null
+        && (resource.data.from_uid == request.auth.uid
+            || resource.data.to_uid == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ── Sakinah: matches (backend writes only, never client) ──
+    // Mutual yes, matchflow step, topics, wali state — all server-owned.
+    // Client must never decide who is shown or write match data.
+    match /sakinah_matches/{matchId} {
+      allow read: if request.auth != null
+        && (resource.data.user_a_uid == request.auth.uid
+            || resource.data.user_b_uid == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ── Sakinah: safety (backend writes only, never client) ──
+    // Safety reports and KYC sessions are server-only.
+    // Reporter can read their own reports. Nobody reads others.
+    match /sakinah_safety/{reportId} {
+      allow read: if request.auth != null
+        && resource.data.reporter_uid == request.auth.uid;
+      allow write: if false;
+    }
+  }
+}

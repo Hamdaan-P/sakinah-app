@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"D:\\\\Projects\\\\sakinah-handoff\\\\frontend\\\\src\" -Recurse | Where-Object { -not $_.PSIsContainer } | Select-Object FullName | Format-Table -AutoSize | Out-String -Width 300)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\Projects\\\\sakinah-handoff\\\\frontend\\\\src\" -Recurse | Where-Object { -not $_.PSIsContainer } | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"D:\\\\Projects\\\\sakinah-handoff\\\\frontend\\\\src\\\\\", \"\"\\) } | Sort-Object)",
+      "Skill(run)",
+      "PowerShell(npm install *)",
+      "PowerShell(curl http://127.0.0.1:8000/)",
+      "PowerShell(curl -X GET http://127.0.0.1:8000/pool/)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://127.0.0.1:8000/pool/\" -Method GET)"
+    ]
+  }
+}
