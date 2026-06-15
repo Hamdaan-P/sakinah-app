@@ -323,6 +323,9 @@ const SakinahCommunityPage = lazy(() =>
 const SakinahVentPage = lazy(() =>
   import('@/features/sakinah/pages/VentPage').then((m) => ({ default: m.VentPage }))
 );
+const SakinahAdminPage = lazy(() =>
+  import('@/features/sakinah/pages/AdminPage').then((m) => ({ default: m.SakinahAdminPage }))
+);
 const ConversationsPage = lazy(() => import('@/features/dms/pages/ConversationsPage'));
 const ChatPage = lazy(() => import('@/features/dms/pages/ChatPage'));
 const LinkedInCallbackPage = lazy(() =>
@@ -767,6 +770,15 @@ export const router = createBrowserRouter([
   {
     path: '/sakinah/vent',
     element: <LazyPage Component={SakinahVentPage} />,
+    errorElement: <RootErrorBoundary />,
+  },
+  {
+    path: '/sakinah/admin',
+    element: (
+      <AdminGuard>
+        <LazyPage Component={SakinahAdminPage} />
+      </AdminGuard>
+    ),
     errorElement: <RootErrorBoundary />,
   },
   {

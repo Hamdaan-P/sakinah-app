@@ -110,10 +110,24 @@ def seed():
                 else:
                     raise e
 
-            # Write profile to Firestore
+            # Write profile to Firestore (merge so test-time fields aren't clobbered)
             profile = {**user_data["profile"], "uid": uid, "created_at": datetime.now(timezone.utc)}
-            db.collection("sakinah_profiles").document(uid).set(profile)
+            db.collection("sakinah_profiles").document(uid).set(profile, merge=True)
             print(f"Written profile for: {user_data['profile']['display_name']}")
+
+            # Write users doc so the KYC store sees kyc_tier = 2 and AuthGuard
+            # doesn't redirect test users to /quick-kyc on every login.
+            now = datetime.now(timezone.utc)
+            db.collection("users").document(uid).set({
+                "kyc_tier": 2,
+                "kyc_status": "tier2_complete",
+                "kyc_level": "full",
+                "profile_completed": True,
+                "tier1_completed_at": now,
+                "deep_kyc_completed_at": now,
+                "onboarding_completed_at": now,
+            }, merge=True)
+            print(f"Written users KYC doc for: {user_data['profile']['display_name']}")
 
         except Exception as e:
             print(f"Error seeding {user_data['email']}: {e}")

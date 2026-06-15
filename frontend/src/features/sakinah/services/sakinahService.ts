@@ -36,6 +36,14 @@ export async function unlockNextTopic(matchId: string) {
   return authPost(`/conversation/${matchId}/unlock-topic`, {});
 }
 
+export async function signalReady(matchId: string) {
+  return authPost(`/conversation/${matchId}/signal-ready`, {});
+}
+
+export async function inviteWali(matchId: string) {
+  return authPost(`/conversation/${matchId}/invite-wali`, {});
+}
+
 // ── Decision ──────────────────────────────────────────────────────────
 export async function submitDecision(matchId: string, outcome: 'proceed' | 'pause' | 'close') {
   return authPost(`/decision/${matchId}`, { outcome });
@@ -44,6 +52,14 @@ export async function submitDecision(matchId: string, outcome: 'proceed' | 'paus
 // ── Safety ────────────────────────────────────────────────────────────
 export async function fileSafetyReport(reportedUid: string, reason: string) {
   return authPost('/safety/report', { reported_uid: reportedUid, reason });
+}
+
+export async function getSafetyReports() {
+  return authGet('/safety/reports');
+}
+
+export async function reviewReport(reportId: string, action: 'ban' | 'dismiss') {
+  return authPost(`/safety/review/${reportId}`, { action });
 }
 
 // ── KYC ───────────────────────────────────────────────────────────────

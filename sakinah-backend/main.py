@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-from routers import pool, interest, match, conversation, decision, safety, kyc
+from routers import pool, interest, match, conversation, decision, safety, kyc, admin
 
 load_dotenv()
 
@@ -24,6 +24,7 @@ app.include_router(conversation.router, prefix="/conversation")
 app.include_router(decision.router, prefix="/decision")
 app.include_router(safety.router, prefix="/safety")
 app.include_router(kyc.router, prefix="/kyc")
+app.include_router(admin.router, prefix="/admin")
 
 
 @app.get("/")

@@ -8,12 +8,13 @@
  * TODO: replace mock with sakinahService.recordDecision(uid, candidateUid, key).
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
-import { useConversation } from '../hooks/useSakinah';
-import { submitDecision } from '../services/sakinahService';
+import { getConversation, submitDecision } from '../services/sakinahService';
+import { auth } from '@/config/firebase.config';
 import '../sakinah.css';
 
 const PAGE_BG =
@@ -63,8 +64,29 @@ const CONFIRM_LINE: Record<DecisionKey, string> = {
 export function DecisionPage() {
   const navigate    = useNavigate();
   const { matchId } = useParams<{ matchId: string }>();
-  const { conversation } = useConversation(matchId ?? '');
-  const matchName = conversation?.match_name ?? 'Your match';
+
+  // Redirect gracefully if matchId is absent from the URL.
+  useEffect(() => {
+    if (!matchId) navigate('/sakinah', { replace: true });
+  }, [matchId, navigate]);
+
+  // Auth-aware fetch — retries after Firebase auth restores on page refresh.
+  const [matchName, setMatchName] = useState('Your match');
+  useEffect(() => {
+    if (!matchId) return;
+    const fetchName = async () => {
+      if (!auth.currentUser) return;
+      try {
+        const data: any = await getConversation(matchId);
+        if (data?.match_name) setMatchName(data.match_name);
+      } catch {
+        // Keep default name; non-fatal.
+      }
+    };
+    fetchName();
+    const unsub = onAuthStateChanged(auth, (user) => { if (user) fetchName(); });
+    return () => unsub();
+  }, [matchId]);
 
   const [selected, setSelected]   = useState<DecisionKey | null>(null);
   const [confirmed, setConfirmed] = useState(false);

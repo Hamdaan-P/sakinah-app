@@ -603,6 +603,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── Sakinah: messages (backend writes only, client reads for real-time) ──
+    // Both match participants may read messages for their match via onSnapshot.
+    // Writing is server-only (Admin SDK bypasses this rule entirely).
+    match /sakinah_messages/{msgId} {
+      allow read: if request.auth != null
+        && (
+          get(/databases/$(database)/documents/sakinah_matches/$(resource.data.match_id)).data.user_a_uid == request.auth.uid
+          || get(/databases/$(database)/documents/sakinah_matches/$(resource.data.match_id)).data.user_b_uid == request.auth.uid
+        );
+      allow write: if false;
+    }
+
     // ── Sakinah: matches (backend writes only, never client) ──
     // Mutual yes, matchflow step, topics, wali state — all server-owned.
     // Client must never decide who is shown or write match data.

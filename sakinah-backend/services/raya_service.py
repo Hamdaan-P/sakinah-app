@@ -72,7 +72,37 @@ RAYA_PROMPTS = {
     "topic_unlock": (
         "You have both explored this topic thoughtfully. The next topic is now open "
         "when you are ready."
-    )
+    ),
+    "topic_announcements": {
+        "Work": (
+            "A new chapter opens — how each of you finds meaning in your work says a lot "
+            "about who you are 🌿"
+        ),
+        "Friends": (
+            "The people we keep close reveal what we value. Take your time exploring this "
+            "together 🤍"
+        ),
+        "Habits": (
+            "The quiet rhythm of daily life shapes a home more than grand gestures. "
+            "Explore this gently 🌿"
+        ),
+        "Self-image": (
+            "How we see ourselves is often how we show up for others. Speak with honesty "
+            "and kindness here 🤍"
+        ),
+        "Responsibility": (
+            "A shared life is built on how each person shows up when it matters. "
+            "Listen carefully to each other 🌿"
+        ),
+        "Expectations": (
+            "What we hope for in a marriage tells the other person everything they need "
+            "to know. Be honest and be gentle 🤍"
+        ),
+        "Finances": (
+            "How we think about money in a shared life is a window into our values. "
+            "There are no wrong answers here 🌿"
+        ),
+    }
 }
 
 def get_opening_message() -> str:
@@ -94,6 +124,18 @@ def get_wali_invite_message() -> str:
 def get_topic_unlock_message() -> str:
     """Returns Raya's message when a new topic unlocks."""
     return RAYA_PROMPTS["topic_unlock"]
+
+def get_topic_announcement(topic: str) -> str:
+    """Returns Raya's warm announcement message when a specific topic unlocks."""
+    return RAYA_PROMPTS["topic_announcements"].get(topic, get_topic_unlock_message())
+
+def get_ready_nudge_message(name: str) -> str:
+    """Returns Raya's gentle message to the partner when one person signals ready."""
+    return f"{name} feels ready to explore the next topic whenever you are 🤍 There's no rush."
+
+def get_journey_complete_nudge_message(name: str) -> str:
+    """Returns Raya's nudge when one person signals ready on the final topic."""
+    return f"{name} feels ready to complete the journey whenever you are 🤍 There's no rush."
 
 def get_all_topics() -> list[str]:
     """Returns the 8 pre-nikah topics in order. Intimacy is never in this list."""

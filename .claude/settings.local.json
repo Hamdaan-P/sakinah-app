@@ -7,7 +7,9 @@
       "PowerShell(npm install *)",
       "PowerShell(curl http://127.0.0.1:8000/)",
       "PowerShell(curl -X GET http://127.0.0.1:8000/pool/)",
-      "PowerShell(Invoke-WebRequest -Uri \"http://127.0.0.1:8000/pool/\" -Method GET)"
+      "PowerShell(Invoke-WebRequest -Uri \"http://127.0.0.1:8000/pool/\" -Method GET)",
+      "Bash(npx tsc *)",
+      "Bash(npx vite *)"
     ]
   }
 }

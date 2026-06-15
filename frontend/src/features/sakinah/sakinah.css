@@ -104,6 +104,17 @@
 /* Scholar link hover */
 .sk-scholar-link:hover { color: #9aa0ac !important; }
 
+/* Enter The Decision button */
+.sk-enter-decision-btn:hover { background: rgba(212,168,83,.1) !important; }
+
+/* Scholar hint — appears below Raya pills in message stream */
+.sk-scholar-hint { text-decoration: none; }
+.sk-scholar-hint:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Scholar footer — always-visible link above the input */
+.sk-scholar-footer { transition: color .3s; }
+.sk-scholar-footer:hover { color: rgba(212,168,83,.8) !important; }
+
 /* Match flow — current step node pulsing ring */
 @keyframes sk-step-pulse {
   0%, 100% { box-shadow: 0 0 0 4px rgba(212,168,83,.12); }

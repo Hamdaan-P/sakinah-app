@@ -14,3 +14,4 @@ export { PreferencesPage } from './PreferencesPage';
 export { SafetyPage } from './SafetyPage';
 export { CommunityPage } from './CommunityPage';
 export { VentPage } from './VentPage';
+export { SakinahAdminPage } from './AdminPage';

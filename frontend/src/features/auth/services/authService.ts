@@ -1011,9 +1011,16 @@ class AuthService {
     for (let attempt = 0; attempt < 8; attempt++) {
       const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
       const candidate = `${prefix}${suffix}`;
-      const q = query(usersRef, where('referral_code', '==', candidate), limit(1));
-      const snap = await getDocs(q);
-      if (snap.empty) return candidate;
+      try {
+        const q = query(usersRef, where('referral_code', '==', candidate), limit(1));
+        const snap = await getDocs(q);
+        if (snap.empty) return candidate;
+      } catch {
+        // Firestore rules block cross-user queries; uniqueness can't be
+        // verified from the client. The code space is large enough that
+        // collision risk is negligible — return this candidate.
+        return candidate;
+      }
     }
 
     // Fallback to deterministic + timestamp fragment

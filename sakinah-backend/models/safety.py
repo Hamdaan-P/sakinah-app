@@ -17,3 +17,8 @@ class SafetyReport(BaseModel):
 class SafetyReportRequest(BaseModel):
     reported_uid: str
     reason: str
+
+
+# Payload sent by an admin when reviewing a report
+class ReviewBody(BaseModel):
+    action: Literal["ban", "dismiss"]
