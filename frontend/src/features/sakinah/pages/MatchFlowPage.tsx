@@ -3,64 +3,127 @@
  * Stage D · Phase 5: A structured opening — 6 gated steps after mutual interest.
  * Tone: a quiet, dignified waiting room. Raya speaks warmly. No system-status copy.
  * No mention of decline. No countdown. The journey continues naturally either way.
- * TODO: replace MOCK_STEP + MOCK_MUTUAL_YES with sakinahService.getMatchFlow(uid, candidateUid).
  */
 
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
+import { WatermarkedPhoto } from '../components/WatermarkedPhoto';
 import '../sakinah.css';
+import { getAuth } from 'firebase/auth';
 
 const PAGE_BG =
   'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), #07090f';
 
-// currentStep: 0-based index of the active step (0–5).
-// TODO: derive from sakinahService.getMatchFlow(uid, candidateUid).
-const MOCK_STEP = 2;
-const MOCK_MUTUAL_YES = true;
-const MATCH_NAME = 'Fatima';
-
 type StepState = 'done' | 'cur' | 'locked';
 type StepDef = { num: string; title: string; desc: string };
 
-const STEPS: StepDef[] = [
-  {
-    num: '٠',
-    title: 'Both portraits complete',
-    desc: 'Your character, values, and verified identity are ready.',
-  },
-  {
-    num: '١',
-    title: 'A resonance found',
-    desc: 'Someone whose values and character resonated with yours.',
-  },
-  {
-    num: '٢',
-    title: 'Your interest, sent',
-    desc: `${MATCH_NAME} will see it when she's ready. Take your time — there's no rush here.`,
-  },
-  {
-    num: '٣',
-    title: 'A guided opening',
-    desc: 'Raya will frame your first exchange around something you share.',
-  },
-  {
-    num: '٤',
-    title: 'Family welcome',
-    desc: 'Either of you may invite a wali to walk alongside.',
-  },
-  {
-    num: '٥',
-    title: 'Depth, then a decision',
-    desc: 'Eight conversations, one at a time, toward a considered choice.',
-  },
-];
+// currentStep: 0-based index of the active step (0–5).
+function buildSteps(matchName: string, matchGender: string): StepDef[] {
+  return [
+    {
+      num: '٠',
+      title: 'Both portraits complete',
+      desc: 'Your character, values, and verified identity are ready.',
+    },
+    {
+      num: '١',
+      title: 'A resonance found',
+      desc: 'Someone whose values and character resonated with yours.',
+    },
+    {
+      num: '٢',
+      title: 'Your interest, sent',
+      desc: `${matchName} will see it when ${matchGender === 'female' ? 'she' : 'he'} is ready. Take your time — there is no rush.`,
+    },
+    {
+      num: '٣',
+      title: 'A guided opening',
+      desc: 'Raya will frame your first exchange around something you share.',
+    },
+    {
+      num: '٤',
+      title: 'Family welcome',
+      desc: 'Either of you may invite a wali to walk alongside.',
+    },
+    {
+      num: '٥',
+      title: 'Depth, then a decision',
+      desc: 'Eight conversations, one at a time, toward a considered choice.',
+    },
+  ];
+}
 
 export function MatchFlowPage() {
   const navigate    = useNavigate();
   const { matchId } = useParams<{ matchId: string }>();
-  const currentStep = MOCK_STEP;
-  const mutualYes   = MOCK_MUTUAL_YES;
+
+  const [currentStep, setCurrentStep] = useState(0);
+  const [mutualYes, setMutualYes] = useState(false);
+  const [matchName, setMatchName] = useState('');
+  const [matchGender, setMatchGender] = useState('');
+  const [iExpressedInterest, setIExpressedInterest] = useState(false);
+  const [loadingMatch, setLoadingMatch] = useState(true);
+
+  useEffect(() => {
+    if (!matchId) return;
+    const fetchMatchData = async () => {
+      try {
+        const { authGet } = await import('../../../lib/api');
+        const data = await authGet<{
+          matches: Array<{
+            match_id: string;
+            matchflow_step: number;
+            mutual_yes: boolean;
+            match_name?: string;
+            match_gender?: string;
+            i_expressed_interest?: boolean;
+          }>;
+        }>('/match/');
+        if (data && data.matches && data.matches.length > 0) {
+          const match = data.matches[0];
+          setCurrentStep(match.matchflow_step || 0);
+          setMutualYes(match.mutual_yes || false);
+          setMatchName(match.match_name || '');
+          setMatchGender(match.match_gender || '');
+          setIExpressedInterest(match.i_expressed_interest || false);
+        }
+      } catch (err) {
+        console.error('Could not fetch match data', err);
+      } finally {
+        setLoadingMatch(false);
+      }
+    };
+    fetchMatchData();
+  }, [matchId]);
+
+  const currentUser = getAuth().currentUser;
+  const myName = currentUser?.displayName || 'You';
+
+  const STEPS = buildSteps(matchName, matchGender);
+
+  const [matchPhotoUrl, setMatchPhotoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!mutualYes || !matchId) return;
+    const fetchPhoto = async () => {
+      try {
+        const { authGet } = await import('../../../lib/api');
+        const data = await authGet<{ photo_url: string | null }>(`/match/photo?match_id=${matchId}`);
+        setMatchPhotoUrl(data.photo_url || null);
+      } catch (err) {
+        console.error('Could not fetch match photo', err);
+      }
+    };
+    fetchPhoto();
+  }, [mutualYes, matchId]);
+
+  const rayaMessage = mutualYes
+    ? "You have both chosen to walk forward, with sincerity and good intention. May Allah bless this step. 🤍"
+    : iExpressedInterest
+    ? `Your interest has been sent quietly. ${matchName} will see it when ${matchGender === 'female' ? 'she' : 'he'} is ready. Take your time — there is no rush.`
+    : `The person whose character you reflected on has expressed ${matchGender === 'female' ? 'her' : 'his'} interest in you. ${matchGender === 'female' ? 'Her' : 'His'} name is ${matchName}.`;
 
   return (
     <div
@@ -149,6 +212,12 @@ export function MatchFlowPage() {
         >
           <div style={{ maxWidth: 520, width: '100%' }}>
 
+            {loadingMatch ? (
+              <div style={{ textAlign: 'center', padding: '80px 0', color: '#5f6675', fontSize: 13 }}>
+                Loading…
+              </div>
+            ) : (
+              <>
             {/* ── Raya speaks ───────────────────────────────────────────── */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -209,8 +278,7 @@ export function MatchFlowPage() {
                     margin: 0,
                   }}
                 >
-                  Your interest has been sent quietly. {MATCH_NAME} will see it when she's
-                  ready. Raya will guide you both from here.
+                  {rayaMessage}
                 </p>
               </div>
             </motion.div>
@@ -250,6 +318,34 @@ export function MatchFlowPage() {
               transition={{ duration: 0.6, delay: 0.52 }}
             >
               {mutualYes ? (
+                <>
+                {mutualYes && matchPhotoUrl && (
+                  <div style={{ textAlign: 'center', margin: '2rem 0 1.5rem' }}>
+                    <p style={{ fontFamily: 'Georgia, serif', color: '#c9a96e', fontSize: '0.9rem', marginBottom: '1rem', fontStyle: 'italic' }}>
+                      You have both chosen to continue. With family aware, here is who you have been getting to know.
+                    </p>
+                    <WatermarkedPhoto
+                      photoUrl={matchPhotoUrl}
+                      viewerName={myName}
+                      style={{ width: '220px', height: '220px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #c9a96e' }}
+                    />
+                    <div style={{
+                      display: 'inline-block',
+                      marginTop: '0.75rem',
+                      background: 'rgba(0,0,0,0.55)',
+                      border: '1px solid rgba(201,169,110,0.4)',
+                      borderRadius: '6px',
+                      padding: '6px 16px',
+                    }}>
+                      <p style={{ margin: 0, fontFamily: 'Georgia, serif', color: '#c9a96e', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                        Shared with {myName}
+                      </p>
+                      <p style={{ margin: 0, fontFamily: 'Georgia, serif', color: 'rgba(255,255,255,0.65)', fontSize: '0.75rem' }}>
+                        Sakinah • {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <button
                   onClick={() => navigate(`/sakinah/conversation/${matchId}`)}
                   className="sk-btn-gold"
@@ -271,6 +367,7 @@ export function MatchFlowPage() {
                 >
                   Begin the conversation →
                 </button>
+                </>
               ) : (
                 <>
                 <p
@@ -310,6 +407,8 @@ export function MatchFlowPage() {
                 </>
               )}
             </motion.div>
+              </>
+            )}
 
           </div>
         </div>
