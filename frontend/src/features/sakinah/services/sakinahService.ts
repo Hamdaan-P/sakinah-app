@@ -1,6 +1,27 @@
 import { authGet, authPost } from '../../../lib/api';
 import { getAuth } from 'firebase/auth';
 
+// ── Profile ───────────────────────────────────────────────────────────
+export async function saveRole(role: string) {
+  return authPost('/profile/role', { role });
+}
+
+export async function saveNiyyah(whyMarriage: string, lifeSeason: string) {
+  return authPost('/profile/niyyah', { whyMarriage, lifeSeason });
+}
+
+export async function saveValues(valueChoice: string, tradition: string, traditionShare: string, lifeStage: string) {
+  return authPost('/profile/values', { valueChoice, tradition, traditionShare, lifeStage });
+}
+
+export async function saveMirror(answers: Array<{ qi: number; choice: string; reflectText?: string }>) {
+  return authPost('/profile/mirror', { answers });
+}
+
+export async function savePreferences(prefs: Record<string, unknown>) {
+  return authPost('/profile/preferences', prefs);
+}
+
 // ── Pool ──────────────────────────────────────────────────────────────
 export async function getPool() {
   const token = await getAuth().currentUser?.getIdToken();
@@ -21,6 +42,46 @@ export async function silentPass(toUid: string) {
 // ── Match ─────────────────────────────────────────────────────────────
 export async function getActiveMatches() {
   return authGet('/match/');
+}
+
+export async function getWaliConversations() {
+  return authGet('/match/wali-conversations');
+}
+
+export async function getWaliNotifications() {
+  return authGet('/match/wali-notifications');
+}
+
+export async function searchSeeker(name: string) {
+  return authGet(`/match/search-seeker?name=${encodeURIComponent(name)}`);
+}
+
+export async function searchWaliUser(name: string) {
+  return authGet(`/match/search-wali?name=${encodeURIComponent(name)}`);
+}
+
+export async function sendWaliRequest(waliUid: string) {
+  return authPost('/match/wali-request', { wali_uid: waliUid });
+}
+
+export async function getPendingWaliInvites() {
+  return authGet('/match/pending-wali-invites');
+}
+
+export async function acceptWaliInvite(requestId: string) {
+  return authPost('/match/approve-wali', { request_id: requestId });
+}
+
+export async function declineWaliInvite(requestId: string) {
+  return authPost('/match/decline-wali', { request_id: requestId });
+}
+
+export async function approveWaliRequest(requestId: string) {
+  return authPost('/match/approve-wali', { request_id: requestId });
+}
+
+export async function getPendingWaliRequest(matchId: string) {
+  return authGet(`/match/pending-wali-request?match_id=${matchId}`);
 }
 
 // ── Conversation ──────────────────────────────────────────────────────

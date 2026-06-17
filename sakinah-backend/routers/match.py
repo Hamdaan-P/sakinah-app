@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from middleware.token_verify import verify_token
 from firebase_admin_setup import get_firestore_client
+from datetime import datetime, timezone
+import uuid
 
 router = APIRouter()
 
@@ -116,3 +119,315 @@ async def get_match_photo(
         return {"photo_url": None}
 
     return {"photo_url": photo_url}
+
+
+@router.get("/wali-conversations")
+async def get_wali_conversations(decoded_token: dict = Depends(verify_token)):
+    uid = decoded_token["uid"]
+    db = get_firestore_client()
+
+    matches = list(
+        db.collection("sakinah_matches")
+        .where("wali_uid", "==", uid)
+        .where("decision_outcome", "==", None)
+        .stream()
+    )
+
+    result = []
+    for doc in matches:
+        data = doc.to_dict()
+        seeker_uid = data.get("user_a_uid")
+
+        seeker_doc = db.collection("users").document(seeker_uid).get()
+        seeker_data = (seeker_doc.to_dict() if seeker_doc.exists else {}) or {}
+        seeker_name = seeker_data.get("full_name") or seeker_data.get("name") or "Unknown"
+
+        unlocked_topics = data.get("unlocked_topics") or []
+        current_topic = unlocked_topics[-1] if unlocked_topics else None
+
+        result.append({
+            "match_id": data.get("match_id"),
+            "seeker_name": seeker_name,
+            "current_topic": current_topic,
+            "matchflow_step": data.get("matchflow_step"),
+        })
+
+    return {"conversations": result}
+
+
+# ── Search Seeker ────────────────────────────────────────────────────────────
+
+@router.get("/search-seeker")
+async def search_seeker(
+    name: str,
+    decoded_token: dict = Depends(verify_token),
+):
+    caller_uid = decoded_token["uid"]
+    db = get_firestore_client()
+
+    name_lower = name.strip().lower()
+    if not name_lower:
+        return {"seekers": []}
+
+    all_users = db.collection("users").stream()
+
+    results = []
+    for doc in all_users:
+        data = doc.to_dict() or {}
+        uid = doc.id
+
+        if uid == caller_uid:
+            continue
+
+        role = data.get("role") or data.get("sakinah_role") or ""
+        if role != "seeker":
+            continue
+
+        is_matchable = data.get("is_matchable", False)
+        kyc_tier = data.get("kycTier") or data.get("kyc_tier") or 0
+        if not is_matchable and kyc_tier < 2:
+            continue
+
+        full_name = data.get("full_name") or data.get("name") or ""
+        if name_lower not in full_name.lower():
+            continue
+
+        results.append({"seeker_uid": uid, "seeker_name": full_name})
+        if len(results) >= 5:
+            break
+
+    return {"seekers": results}
+
+
+# ── Search Wali ───────────────────────────────────────────────────────────────
+
+@router.get("/search-wali")
+async def search_wali(
+    name: str,
+    decoded_token: dict = Depends(verify_token),
+):
+    caller_uid = decoded_token["uid"]
+    db = get_firestore_client()
+
+    name_lower = name.strip().lower()
+    if not name_lower:
+        return {"walis": []}
+
+    all_users = db.collection("users").stream()
+
+    results = []
+    for doc in all_users:
+        data = doc.to_dict() or {}
+        uid = doc.id
+
+        if uid == caller_uid:
+            continue
+
+        role = data.get("role") or data.get("sakinah_role") or ""
+        if role != "wali":
+            continue
+
+        full_name = data.get("full_name") or data.get("display_name") or data.get("name") or ""
+        if name_lower not in full_name.lower():
+            continue
+
+        results.append({"wali_uid": uid, "wali_name": full_name})
+        if len(results) >= 5:
+            break
+
+    return {"walis": results}
+
+
+# ── Send Wali Request ─────────────────────────────────────────────────────────
+
+class WaliRequestBody(BaseModel):
+    wali_uid: str
+
+
+@router.post("/wali-request")
+async def send_wali_request(
+    body: WaliRequestBody,
+    decoded_token: dict = Depends(verify_token),
+):
+    seeker_uid = decoded_token["uid"]  # caller is the seeker
+    print(f"[wali-request] HIT — seeker_uid={seeker_uid} wali_uid={body.wali_uid}")
+    db = get_firestore_client()
+
+    seeker_doc = db.collection("users").document(seeker_uid).get()
+    seeker_data = (seeker_doc.to_dict() if seeker_doc.exists else {}) or {}
+    seeker_name = seeker_data.get("full_name") or seeker_data.get("name") or seeker_data.get("display_name") or "Seeker"
+
+    wali_doc = db.collection("users").document(body.wali_uid).get()
+    wali_data = (wali_doc.to_dict() if wali_doc.exists else {}) or {}
+    wali_name = wali_data.get("full_name") or wali_data.get("name") or wali_data.get("display_name") or "Guardian"
+
+    # Find the seeker's active match (if any)
+    active_match_id = None
+    as_a = (
+        db.collection("sakinah_matches")
+        .where("user_a_uid", "==", seeker_uid)
+        .where("decision_outcome", "==", None)
+        .limit(1)
+        .stream()
+    )
+    match_doc = next(as_a, None)
+    if match_doc:
+        active_match_id = match_doc.to_dict().get("match_id")
+    else:
+        as_b = (
+            db.collection("sakinah_matches")
+            .where("user_b_uid", "==", seeker_uid)
+            .where("decision_outcome", "==", None)
+            .limit(1)
+            .stream()
+        )
+        match_doc = next(as_b, None)
+        if match_doc:
+            active_match_id = match_doc.to_dict().get("match_id")
+
+    request_id = str(uuid.uuid4())
+    db.collection("wali_requests").document(request_id).set({
+        "request_id": request_id,
+        "seeker_uid": seeker_uid,
+        "seeker_name": seeker_name,
+        "wali_uid": body.wali_uid,
+        "wali_name": wali_name,
+        "match_id": active_match_id,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc),
+    })
+
+    return {"success": True, "request_id": request_id}
+
+
+# ── Approve Wali Request ──────────────────────────────────────────────────────
+
+class ApproveWaliBody(BaseModel):
+    request_id: str
+
+
+@router.post("/approve-wali")
+async def approve_wali_request(
+    body: ApproveWaliBody,
+    decoded_token: dict = Depends(verify_token),
+):
+    seeker_uid = decoded_token["uid"]
+    db = get_firestore_client()
+
+    req_doc = db.collection("wali_requests").document(body.request_id).get()
+    if not req_doc.exists:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    req_data = req_doc.to_dict() or {}
+
+    if req_data.get("seeker_uid") != seeker_uid:
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    if req_data.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Request is no longer pending")
+
+    db.collection("wali_requests").document(body.request_id).update({"status": "approved"})
+
+    match_id = req_data.get("match_id")
+    if match_id:
+        db.collection("sakinah_matches").document(match_id).update({
+            "wali_uid": req_data["wali_uid"],
+            "wali_present": True,
+        })
+
+    return {"success": True}
+
+
+# ── Pending Wali Request ──────────────────────────────────────────────────────
+
+@router.get("/pending-wali-request")
+async def get_pending_wali_request(
+    match_id: str,
+    decoded_token: dict = Depends(verify_token),
+):
+    seeker_uid = decoded_token["uid"]
+    db = get_firestore_client()
+
+    results = (
+        db.collection("wali_requests")
+        .where("seeker_uid", "==", seeker_uid)
+        .where("status", "==", "pending")
+        .limit(1)
+        .stream()
+    )
+
+    doc = next(results, None)
+    if not doc:
+        return {"request": None}
+
+    data = doc.to_dict() or {}
+    return {
+        "request": {
+            "request_id": data.get("request_id"),
+            "wali_name": data.get("wali_name"),
+        }
+    }
+
+
+# ── Pending Wali Invites (for wali) ──────────────────────────────────────────
+
+@router.get("/pending-wali-invites")
+async def get_pending_wali_invites(decoded_token: dict = Depends(verify_token)):
+    wali_uid = decoded_token["uid"]
+    db = get_firestore_client()
+
+    results = (
+        db.collection("wali_requests")
+        .where("wali_uid", "==", wali_uid)
+        .where("status", "==", "pending")
+        .stream()
+    )
+
+    invites = []
+    for doc in results:
+        data = doc.to_dict() or {}
+        invites.append({
+            "request_id": data.get("request_id"),
+            "seeker_name": data.get("seeker_name") or "Unknown",
+            "match_id": data.get("match_id"),
+        })
+
+    return {"invites": invites}
+
+
+# ── Decline Wali Request ──────────────────────────────────────────────────────
+
+class DeclineWaliBody(BaseModel):
+    request_id: str
+
+
+@router.post("/decline-wali")
+async def decline_wali_request(
+    body: DeclineWaliBody,
+    decoded_token: dict = Depends(verify_token),
+):
+    db = get_firestore_client()
+    db.collection("wali_requests").document(body.request_id).update({"status": "declined"})
+    return {"success": True}
+
+
+# ── Wali Notifications ────────────────────────────────────────────────────────
+
+@router.get("/wali-notifications")
+async def get_wali_notifications(decoded_token: dict = Depends(verify_token)):
+    token_uid = decoded_token["uid"]
+    db = get_firestore_client()
+
+    results = (
+        db.collection("wali_notifications")
+        .where("wali_uid", "==", token_uid)
+        .stream()
+    )
+
+    notifications = []
+    for doc in results:
+        data = doc.to_dict() or {}
+        data["notification_id"] = doc.id
+        notifications.append(data)
+
+    return {"notifications": notifications}

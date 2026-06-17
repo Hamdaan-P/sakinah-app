@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { saveNiyyah } from '../services/sakinahService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import '../sakinah.css';
@@ -77,7 +78,11 @@ export function NiyyahPage() {
   }
 
   function handleContinue() {
-    // TODO: persist { whyChoice, seasonChoice } via sakinahService when service layer is wired
+    if (whyChoice && seasonChoice) {
+      saveNiyyah(whyChoice, seasonChoice).catch((err) =>
+        console.error('saveNiyyah failed:', err)
+      );
+    }
     navigate('/sakinah/values');
   }
 

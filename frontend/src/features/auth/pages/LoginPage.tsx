@@ -13,6 +13,8 @@ import { motion } from 'framer-motion';
 import { FiMail, FiLock, FiLoader } from 'react-icons/fi';
 import { Sparkle, UsersThree, CurrencyDollarSimple, GridFour, GlobeHemisphereWest, Wallet } from '@phosphor-icons/react';
 import { FcGoogle } from 'react-icons/fc';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/config/firebase.config';
 import { useAuthStore } from '@/core/stores/auth.store';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 import { GuestGuard } from '../components/AuthGuard';
@@ -50,10 +52,19 @@ function LoginPage() {
 
   // Navigate on successful auth (skip for anonymous users — they're here to sign in with real credentials)
   useEffect(() => {
-    if (state.type === 'authenticated' && !user?.isAnonymous) {
-      navigate('/');
+    if (state.type !== 'authenticated' || user?.isAnonymous) return;
+    const uid = user?.id;
+    if (!uid) {
+      navigate('/sakinah/niyyah');
+      return;
     }
-  }, [state.type, user?.isAnonymous, navigate]);
+    getDoc(doc(db, 'users', uid)).then((snap) => {
+      const role = snap.exists() ? snap.data()?.sakinah_role : null;
+      navigate(role ? '/sakinah' : '/sakinah/niyyah');
+    }).catch(() => {
+      navigate('/sakinah/niyyah');
+    });
+  }, [state.type, user?.isAnonymous, user?.id, navigate]);
 
   // Clear error when component unmounts
   useEffect(() => {

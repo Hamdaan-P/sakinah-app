@@ -141,6 +141,7 @@ async def invite_wali(
 ):
     uid = decoded_token["uid"]
     db = get_firestore_client()
+    print(f"[invite-wali] HIT — uid={uid} match_id={match_id}")
     _get_match_or_403(match_id, uid, db)
 
     db.collection("sakinah_matches").document(match_id).update({"wali_present": True})

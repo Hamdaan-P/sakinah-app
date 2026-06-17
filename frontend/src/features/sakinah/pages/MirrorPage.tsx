@@ -7,6 +7,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { saveMirror } from '../services/sakinahService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import '../sakinah.css';
@@ -133,7 +134,7 @@ export function MirrorPage() {
     setAnswers(next);
 
     if (isLast) {
-      // TODO: persist `next` via sakinahService when service layer is wired
+      saveMirror(next).catch((err) => console.error('saveMirror failed:', err));
       setTimeout(() => navigate('/sakinah/portrait'), 300);
       return;
     }

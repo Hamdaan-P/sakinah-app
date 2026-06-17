@@ -3,13 +3,14 @@
  * Stage A · Entry: The user chooses whether they are a seeker or a wali.
  * Two equal, dignified options — no option looks more correct than the other.
  * Continue button appears only after a choice is made.
- * TODO: persist role flag (seeker | wali) via sakinahService.setRole().
+ * Role is saved to localStorage as 'sakinah_role' for downstream pages to read.
  */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
+import { saveRole } from '../services/sakinahService';
 import '../sakinah.css';
 
 const PAGE_BG =
@@ -183,7 +184,11 @@ export function RolePage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
                   transition={{ duration: 0.22 }}
-                  onClick={() => navigate('/sakinah/expect')}
+                  onClick={() => {
+                    localStorage.setItem('sakinah_role', role!);
+                    saveRole(role!).catch(err => console.error('saveRole failed:', err));
+                    navigate(role === 'wali' ? '/sakinah/wali-login' : '/sakinah/expect');
+                  }}
                   className="sk-btn-gold"
                   style={{
                     display: 'block', width: '100%',

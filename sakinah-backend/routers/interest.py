@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from middleware.token_verify import verify_token
 from firebase_admin_setup import get_firestore_client
 from services import matching
@@ -14,10 +14,6 @@ async def express_interest(
 ):
     uid = decoded_token["uid"]
     db = get_firestore_client()
-
-    if not matching.check_conversation_cap(uid, db):
-        raise HTTPException(status_code=403, detail="Active conversation limit reached")
-
     result = matching.express_interest(uid, body.to_uid, db)
     return result
 

@@ -325,6 +325,12 @@ const SakinahVentPage = lazy(() =>
 );
 const SakinahAdminPage = lazy(() =>
   import('@/features/sakinah/pages/AdminPage').then((m) => ({ default: m.SakinahAdminPage }))
+)
+const SakinahWaliLoginPage = lazy(() =>
+  import('@/features/sakinah/pages/WaliLoginPage').then((m) => ({ default: m.WaliLoginPage }))
+)
+const SakinahWaliDashboardPage = lazy(() =>
+  import('@/features/sakinah/pages/WaliDashboardPage').then((m) => ({ default: m.WaliDashboardPage }))
 );
 const ConversationsPage = lazy(() => import('@/features/dms/pages/ConversationsPage'));
 const ChatPage = lazy(() => import('@/features/dms/pages/ChatPage'));
@@ -779,6 +785,16 @@ export const router = createBrowserRouter([
         <LazyPage Component={SakinahAdminPage} />
       </AdminGuard>
     ),
+    errorElement: <RootErrorBoundary />,
+  },
+  {
+    path: '/sakinah/wali-login',
+    element: <LazyPage Component={SakinahWaliLoginPage} />,
+    errorElement: <RootErrorBoundary />,
+  },
+  {
+    path: '/sakinah/wali-dashboard',
+    element: <LazyPage Component={SakinahWaliDashboardPage} />,
     errorElement: <RootErrorBoundary />,
   },
   {

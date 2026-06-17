@@ -10,11 +10,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { collection, doc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import type { Timestamp } from 'firebase/firestore';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import { useConversation } from '../hooks';
-import { sendMessage, inviteWali, fileSafetyReport, signalReady } from '../services/sakinahService';
+import { sendMessage, inviteWali, fileSafetyReport, signalReady, getPendingWaliRequest, approveWaliRequest, searchWaliUser, sendWaliRequest } from '../services/sakinahService';
 import { db, auth } from '@/config/firebase.config';
 import '../sakinah.css';
 
@@ -447,8 +447,20 @@ export function ConversationPage() {
   const { conversation } = useConversation(matchId ?? '');
   const matchName = conversation?.match_name ?? 'Your match';
 
+  const [userRole, setUserRole]                   = useState<string | null>(null);
   const [waliPresent, setWaliPresent]             = useState(false);
+  const [waliName, setWaliName]                   = useState('');
   const [waliConfirmation, setWaliConfirmation]   = useState(false);
+  const [pendingWaliReq, setPendingWaliReq]       = useState<{ request_id: string; wali_name: string } | null>(null);
+  const [waliReqDismissed, setWaliReqDismissed]   = useState(false);
+  const [waliReqApproved, setWaliReqApproved]     = useState(false);
+  const [waliSearchOpen, setWaliSearchOpen]       = useState(false);
+  const [waliSearchQuery, setWaliSearchQuery]     = useState('');
+  const [waliSearchResults, setWaliSearchResults] = useState<Array<{ wali_uid: string; wali_name: string }>>([]);
+  const [waliSearching, setWaliSearching]         = useState(false);
+  const [waliInviteSent, setWaliInviteSent]       = useState(false);
+  const [waliInviting, setWaliInviting]           = useState(false);
+  const [waliSuccessMsg, setWaliSuccessMsg]       = useState('');
   const [nudgeDismissed, setNudgeDismissed]       = useState(false);
   const [rayaCardDismissed, setRayaCardDismissed] = useState(false);
   const [messageInput, setMessageInput]           = useState('');
@@ -466,9 +478,22 @@ export function ConversationPage() {
 
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
   const messagesEnd    = useRef<HTMLDivElement>(null);
+  const waliSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toneGraceRef        = useRef(false);
   const pendingSendRef      = useRef('');
   const pendingScenarioRef  = useRef<ScenarioId>('accusatory');
+
+  // Fetch current user's role from Firestore on mount.
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    getDoc(doc(db, 'users', uid)).then((snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setUserRole(data.role || data.sakinah_role || null);
+      }
+    }).catch(console.error);
+  }, []);
 
   // Real-time message listener.
   // orderBy requires the composite index on (match_id, created_at) which is in
@@ -552,7 +577,10 @@ export function ConversationPage() {
       const activeTopic = unlocked.length > 0 ? unlocked[unlocked.length - 1] : TOPICS[0];
       const stepIdx = TOPICS.indexOf(activeTopic as typeof TOPICS[number]);
       setLiveMatchflowStep(stepIdx >= 0 ? stepIdx : 0);
-      if (data.wali_present) setWaliPresent(true);
+      if (data.wali_uid) {
+        setWaliPresent(true);
+        setWaliName(data.wali_name || 'Your Wali');
+      }
     });
     return () => unsub();
   }, [matchId]);
@@ -562,6 +590,15 @@ export function ConversationPage() {
       setWaliPresent(true);
     }
   }, [conversation?.wali_present]);
+
+  useEffect(() => {
+    if (!matchId) return;
+    getPendingWaliRequest(matchId)
+      .then((data: any) => {
+        if (data?.request) setPendingWaliReq(data.request);
+      })
+      .catch((e) => console.error('getPendingWaliRequest failed:', e));
+  }, [matchId]);
 
   // Scroll to bottom whenever messages update or closing step advances.
   useEffect(() => {
@@ -615,6 +652,36 @@ export function ConversationPage() {
     // Only reaches here if no tone match
     if (matchId) {
       await sendMessage(matchId, text);
+    }
+  };
+
+  const searchWali = async (name: string) => {
+    if (name.length < 2) { setWaliSearchResults([]); return; }
+    setWaliSearching(true);
+    try {
+      const res: any = await searchWaliUser(name);
+      setWaliSearchResults(res.walis || []);
+    } catch (e) {
+      console.error('wali search failed:', e);
+    } finally {
+      setWaliSearching(false);
+    }
+  };
+
+  const sendWaliInvite = async (waliUid: string) => {
+    setWaliInviting(true);
+    try {
+      await sendWaliRequest(waliUid);
+      setWaliInviteSent(true);
+      setWaliSearchOpen(false);
+      setWaliSearchQuery('');
+      setWaliSearchResults([]);
+      setWaliSuccessMsg('Your invitation has been sent. They will see it when they log in.');
+      setTimeout(() => setWaliSuccessMsg(''), 4000);
+    } catch (e) {
+      console.error('wali invite failed:', e);
+    } finally {
+      setWaliInviting(false);
     }
   };
 
@@ -784,6 +851,105 @@ export function ConversationPage() {
           </div>
         </div>
 
+        {/* ── Pending Wali Request banner ────────────────────────────────── */}
+        {userRole === 'seeker' && <AnimatePresence>
+          {pendingWaliReq && !waliReqDismissed && !waliReqApproved && (
+            <motion.div
+              key="wali-req-banner"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: 16, flexWrap: 'wrap',
+                padding: '12px 56px',
+                background: 'rgba(212,168,83,.05)',
+                borderBottom: '1px solid rgba(212,168,83,.14)',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: 'italic', fontSize: 14,
+                  color: '#e7c984', lineHeight: 1.45, flex: 1,
+                  minWidth: 180,
+                }}
+              >
+                {pendingWaliReq.wali_name} would like to join your journey as your guardian
+              </span>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button
+                  onClick={async () => {
+                    try {
+                      await approveWaliRequest(pendingWaliReq.request_id);
+                      setWaliReqApproved(true);
+                      setWaliPresent(true);
+                    } catch (e) {
+                      console.error('approveWaliRequest failed:', e);
+                    }
+                  }}
+                  style={{
+                    padding: '7px 16px', borderRadius: 20,
+                    border: '1px solid rgba(212,168,83,.35)',
+                    background: 'rgba(212,168,83,.1)',
+                    color: '#e7c984', fontSize: 12, fontWeight: 500,
+                    cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
+                    transition: '.2s',
+                  }}
+                >
+                  Allow
+                </button>
+                <button
+                  onClick={() => setWaliReqDismissed(true)}
+                  style={{
+                    padding: '7px 16px', borderRadius: 20,
+                    border: '1px solid rgba(255,255,255,.08)',
+                    background: 'transparent',
+                    color: '#9aa0ac', fontSize: 12,
+                    cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
+                    transition: '.2s',
+                  }}
+                >
+                  Not now
+                </button>
+              </div>
+            </motion.div>
+          )}
+          {waliReqApproved && (
+            <motion.div
+              key="wali-approved-confirm"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                flexShrink: 0,
+                padding: '10px 56px',
+                background: 'rgba(212,168,83,.04)',
+                borderBottom: '1px solid rgba(212,168,83,.1)',
+                fontFamily: "'Cormorant Garamond', serif",
+                fontStyle: 'italic', fontSize: 13.5,
+                color: '#e7c984', textAlign: 'center',
+              }}
+            >
+              Your Wali is now present 🤍
+            </motion.div>
+          )}
+        </AnimatePresence>}
+
+        {/* ── Wali presence banner ───────────────────────────────────────── */}
+        {waliPresent && (
+          <div style={{ background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.4)', borderRadius:'10px', padding:'10px 16px', margin:'8px 16px', display:'flex', alignItems:'center', gap:'10px' }}>
+            <span style={{ fontSize:'18px' }}>🛡️</span>
+            <div>
+              <p style={{ color:'#C9A84C', fontWeight:600, margin:0, fontSize:'13px' }}>{waliName} is now present</p>
+              <p style={{ color:'#888', margin:0, fontSize:'12px' }}>Your guardian is supporting this conversation</p>
+            </div>
+          </div>
+        )}
+
         {/* ── Scrollable body ────────────────────────────────────────────── */}
         <div
           className="sk-page-body"
@@ -792,55 +958,125 @@ export function ConversationPage() {
           <div style={{ maxWidth: 520, width: '100%' }}>
 
             {/* ── Wali toggle ──────────────────────────────────────────── */}
-            <motion.div
+            {userRole === 'seeker' && <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.04 }}
               style={{ textAlign: 'center', marginBottom: 18 }}
             >
               <button
-                disabled={waliPresent}
-                onClick={async () => {
-                  if (!matchId) return;
-                  await inviteWali(matchId);
-                  setWaliPresent(true);
-                  setWaliConfirmation(true);
-                  setTimeout(() => setWaliConfirmation(false), 3000);
-                }}
+                onClick={() => { if (!waliPresent) setWaliSearchOpen(true); }}
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7,
-                  fontSize: 11, letterSpacing: '0.01em',
-                  color: waliPresent ? '#e7c984' : '#9aa0ac',
-                  border: `1px solid ${waliPresent ? 'rgba(212,168,83,.28)' : 'rgba(255,255,255,.08)'}`,
-                  borderRadius: 30, padding: '6px 14px',
-                  background: waliPresent ? 'rgba(212,168,83,.05)' : 'transparent',
-                  cursor: waliPresent ? 'default' : 'pointer', transition: '.22s',
-                  fontFamily: "'Manrope', sans-serif",
+                  background: 'transparent',
+                  border: '1px solid #C9A84C',
+                  borderRadius: '999px',
+                  color: '#C9A84C',
+                  padding: '6px 16px',
+                  fontSize: '13px',
+                  cursor: waliPresent ? 'default' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                 }}
               >
-                <span style={{ fontSize: 13, lineHeight: 1 }}>⚭</span>
-                {waliPresent
-                  ? 'Wali present · your brother'
-                  : 'Invite your wali to this conversation'}
+                {waliPresent ? '🕌 Wali present' : '🕌 Invite your wali'}
               </button>
-              <AnimatePresence>
-                {waliConfirmation && (
-                  <motion.div
-                    key="wali-confirm"
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.2 }}
+
+              {waliSuccessMsg && (
+                <p style={{ color: '#C9A84C', fontSize: '13px', marginTop: '8px', textAlign: 'center' }}>
+                  ✓ {waliSuccessMsg}
+                </p>
+              )}
+
+              {waliSearchOpen && (
+                <div style={{
+                  background: '#1a1a1a',
+                  border: '1px solid #C9A84C',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginTop: '8px',
+                  width: '100%',
+                  maxWidth: '400px',
+                }}>
+                  <p style={{ color: '#C9A84C', fontSize: '14px', marginBottom: '4px', fontWeight: 600 }}>
+                    Find your guardian
+                  </p>
+                  <p style={{ color: '#888', fontSize: '12px', marginBottom: '12px' }}>
+                    Enter their name to invite them
+                  </p>
+                  <input
+                    type="text"
+                    placeholder="e.g. Hassan"
+                    value={waliSearchQuery}
+                    onChange={(e) => {
+                      setWaliSearchQuery(e.target.value);
+                      if (waliSearchDebounceRef.current) clearTimeout(waliSearchDebounceRef.current);
+                      waliSearchDebounceRef.current = setTimeout(() => searchWali(e.target.value), 500);
+                    }}
                     style={{
-                      marginTop: 8, fontSize: 11,
-                      color: '#7FB07A', letterSpacing: '0.01em',
+                      width: '100%',
+                      background: '#111',
+                      border: '1px solid #333',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      marginBottom: '12px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  {waliSearching && (
+                    <p style={{ color: '#888', fontSize: '13px' }}>Searching...</p>
+                  )}
+                  {waliSearchResults.map((result) => (
+                    <div key={result.wali_uid} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px 12px',
+                      background: '#111',
+                      borderRadius: '8px',
+                      marginBottom: '8px',
+                    }}>
+                      <span style={{ color: '#fff', fontSize: '14px' }}>{result.wali_name}</span>
+                      <button
+                        onClick={() => sendWaliInvite(result.wali_uid)}
+                        disabled={waliInviting}
+                        style={{
+                          background: '#C9A84C',
+                          color: '#000',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '6px 14px',
+                          fontSize: '13px',
+                          cursor: waliInviting ? 'not-allowed' : 'pointer',
+                          fontWeight: 600,
+                          opacity: waliInviting ? 0.7 : 1,
+                        }}
+                      >
+                        {waliInviting ? 'Sending...' : 'Invite'}
+                      </button>
+                    </div>
+                  ))}
+                  {!waliSearching && waliSearchQuery.length >= 2 && waliSearchResults.length === 0 && (
+                    <p style={{ color: '#888', fontSize: '13px' }}>No guardian found with that name</p>
+                  )}
+                  <button
+                    onClick={() => { setWaliSearchOpen(false); setWaliSearchQuery(''); setWaliSearchResults([]); }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#888',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      marginTop: '8px',
                     }}
                   >
-                    Your wali has been invited
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </motion.div>}
 
             {/* ── Topic curriculum ──────────────────────────────────────── */}
             <motion.div

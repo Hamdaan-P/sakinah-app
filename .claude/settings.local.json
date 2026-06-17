@@ -9,7 +9,14 @@
       "PowerShell(curl -X GET http://127.0.0.1:8000/pool/)",
       "PowerShell(Invoke-WebRequest -Uri \"http://127.0.0.1:8000/pool/\" -Method GET)",
       "Bash(npx tsc *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(python reset_and_diagnose.py)",
+      "Bash(python -c ' *)",
+      "Bash(tasklist //FI \"IMAGENAME eq python.exe\" //FO TABLE)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist //FI \"PID eq 10396\" //FO TABLE)",
+      "Bash(taskkill //PID 10396 //F)",
+      "Bash(python -m uvicorn main:app --reload)"
     ]
   }
 }

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tasklist //FI \"PID eq 15220\" //FO TABLE)",
+      "Bash(python -c ' *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(python seed_ahmed.py)",
+      "Bash(python seed_fatima.py)",
+      "Bash(python test_scoring.py)",
+      "Bash(python seed_kyc_tier.py)",
+      "Bash(python test_scoring_reset.py)",
+      "Bash(jobs)",
+      "Bash(python create_wali_user.py)",
+      "Bash(python seed_roles.py)",
+      "Bash(python reset_wali.py)"
+    ]
+  }
+}

@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { saveValues } from '../services/sakinahService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import '../sakinah.css';
@@ -90,7 +91,11 @@ export function ValuesPage() {
   }
 
   function handleContinue() {
-    // TODO: persist { valueChoice, tradition, traditionShare, lifeStage } via sakinahService
+    if (valueChoice && tradition && traditionShare && lifeStage) {
+      saveValues(valueChoice, tradition, traditionShare, lifeStage).catch((err) =>
+        console.error('saveValues failed:', err)
+      );
+    }
     navigate('/sakinah/mirror');
   }
 

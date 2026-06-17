@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { savePreferences } from '../services/sakinahService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import '../sakinah.css';
@@ -227,7 +228,16 @@ export function PreferencesPage() {
   }
 
   const isLast = section === 7;
-  const advance = () => (isLast ? navigate('/sakinah') : setSection(s => s + 1));
+  const advance = () => {
+    if (isLast) {
+      savePreferences(prefs as unknown as Record<string, unknown>).catch((err) =>
+        console.error('savePreferences failed:', err)
+      );
+      navigate('/sakinah');
+    } else {
+      setSection(s => s + 1);
+    }
+  };
   const meta = SECTION_META[section];
 
   function sectionBody(): ReactNode {

@@ -4,6 +4,7 @@ from typing import Literal
 from middleware.token_verify import verify_token
 from firebase_admin_setup import get_firestore_client
 from services import raya_service
+from google.cloud.firestore import SERVER_TIMESTAMP
 
 router = APIRouter()
 
@@ -33,6 +34,30 @@ async def submit_decision(
     db.collection("sakinah_matches").document(match_id).update(
         {"decision_outcome": body.outcome}
     )
+
+    if body.outcome == "proceed":
+        seeker_uid = uid
+        seeker_doc = db.collection("users").document(seeker_uid).get()
+        seeker_data = (seeker_doc.to_dict() if seeker_doc.exists else {}) or {}
+        seeker_name = (
+            seeker_data.get("full_name")
+            or seeker_data.get("display_name")
+            or seeker_data.get("name")
+            or "The seeker"
+        )
+
+        wali_uid = data.get("wali_uid")
+        if wali_uid:
+            import uuid
+            db.collection("wali_notifications").document(str(uuid.uuid4())).set({
+                "wali_uid": wali_uid,
+                "seeker_name": seeker_name,
+                "match_id": match_id,
+                "decision": "proceed",
+                "message": f"{seeker_name} has decided to proceed to Nikah with their match. May Allah bless this union.",
+                "read": False,
+                "created_at": SERVER_TIMESTAMP,
+            })
 
     return {
         "outcome": body.outcome,
