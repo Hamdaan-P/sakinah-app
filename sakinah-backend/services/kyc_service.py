@@ -39,6 +39,11 @@ async def submit_kyc(
         db.collection("sakinah_profiles").document(uid).set({
             "is_verified": True,
             "is_matchable": True,
+            "kyc_tier": 2,
+            "kycTier": 2,
+            "uid": uid,
+            "gender": "unknown",
+            "age": 25,
             "kyc_data": {"name": "Dev User", "age": 25, "gender": "unknown"},
         }, merge=True)
         db.collection("sakinah_safety").document(session_id).set({
@@ -89,11 +94,16 @@ async def submit_kyc(
             for k in ("name", "age", "gender")
             if k in vendor_data
         }
-        db.collection("sakinah_profiles").document(uid).update({
+        db.collection("sakinah_profiles").document(uid).set({
             "is_verified": True,
             "is_matchable": True,
+            "kyc_tier": 2,
+            "kycTier": 2,
+            "uid": uid,
+            "gender": kyc_data.get("gender", ""),
+            "age": kyc_data.get("age", 0),
             "kyc_data": kyc_data,
-        })
+        }, merge=True)
         db.collection("sakinah_safety").document(session_id).update({"status": "approved"})
         return {"status": "approved"}
 

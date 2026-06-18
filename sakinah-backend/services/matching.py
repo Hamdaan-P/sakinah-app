@@ -168,6 +168,7 @@ def get_pool(uid: str, db) -> list[dict]:
 
         score   = _score_candidate(requester_user, cand_user, data)
         stripped = _strip_profile(data)
+        stripped["uid"] = candidate_uid
         stripped["compatibility_score"] = score
         scored.append(stripped)
 

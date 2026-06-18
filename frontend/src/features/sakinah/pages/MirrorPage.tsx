@@ -586,6 +586,30 @@ export function MirrorPage() {
                     ● always here to help
                   </span>
                 </div>
+                <button
+                  onClick={() => setRayaOpen(false)}
+                  style={{
+                    marginLeft: 'auto',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#6b7280',
+                    fontSize: 22,
+                    lineHeight: 1,
+                    minWidth: 44,
+                    minHeight: 44,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}
+                  aria-label="Close Raya panel"
+                >
+                  ×
+                </button>
               </div>
 
               <p

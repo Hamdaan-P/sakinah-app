@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { savePreferences } from '../services/sakinahService';
+import { savePreferences, computePool } from '../services/sakinahService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import '../sakinah.css';
@@ -21,26 +21,26 @@ const PAGE_BG =
 interface Prefs {
   ageMin: number; ageMax: number;
   heightImportant: boolean; heightCm: number;
-  build: string; priorMarriage: string; childrenFromPrev: string;
+  priorMarriage: string; childrenFromPrev: string;
   dailySalah: string; quranRelationship: string; hijabModestDress: string;
-  voluntaryFasts: string; lifestyle: string[];
+  lifestyle: string[];
   educationLevel: string; career: string; financialStability: string; incomeDifference: string;
   geographicRange: string; relocation: string; livingArrangement: string; motherTongue: string;
-  children: string; parentingApproach: string; familyCloseness: string; waliInvolvement: string;
-  emotionalStyle: string; socialNature: string; humour: string; ambition: string; conflictResolution: string;
-  diet: string; sharedInterests: string[]; socialMedia: string; hospitality: string;
+  children: string; parentingApproach: string; familyCloseness: string;
+  emotionalStyle: string; humour: string; conflictResolution: string;
+  diet: string; sharedInterests: string[]; socialMedia: string;
   hardLines: string[]; polygynyStance: string; decisionTimeline: string; finalNote: string;
 }
 
 const INIT: Prefs = {
   ageMin: 24, ageMax: 34, heightImportant: true, heightCm: 165,
-  build: '', priorMarriage: '', childrenFromPrev: '',
-  dailySalah: '', quranRelationship: '', hijabModestDress: '', voluntaryFasts: '', lifestyle: [],
+  priorMarriage: '', childrenFromPrev: '',
+  dailySalah: '', quranRelationship: '', hijabModestDress: '', lifestyle: [],
   educationLevel: '', career: '', financialStability: '', incomeDifference: '',
   geographicRange: '', relocation: '', livingArrangement: '', motherTongue: '',
-  children: '', parentingApproach: '', familyCloseness: '', waliInvolvement: '',
-  emotionalStyle: '', socialNature: '', humour: '', ambition: '', conflictResolution: '',
-  diet: '', sharedInterests: [], socialMedia: '', hospitality: '',
+  children: '', parentingApproach: '', familyCloseness: '',
+  emotionalStyle: '', humour: '', conflictResolution: '',
+  diet: '', sharedInterests: [], socialMedia: '',
   hardLines: [], polygynyStance: '', decisionTimeline: '', finalNote: '',
 };
 
@@ -54,6 +54,37 @@ const SECTION_META = [
   { title: 'Everyday life',             eyebrow: 'Lifestyle & home'          },
   { title: 'Your lines and your heart', eyebrow: 'Dealbreakers & final note' },
 ];
+
+const RAYA_HELP = [
+  {
+    id: 'r1',
+    icon: '☉',
+    label: 'Help me with this question',
+    reply:
+      "There's no wrong answer here — just honest ones. Think about what has mattered most in your past or what you imagine your daily life together looking like. That feeling is your answer.",
+  },
+  {
+    id: 'r2',
+    icon: '?',
+    label: 'Why does Raya ask this?',
+    reply:
+      "These questions help me find someone whose life rhythms match yours — not to judge anyone's choices. You describe what you want; I never use this to exclude unfairly.",
+  },
+  {
+    id: 'r3',
+    icon: '⌥',
+    label: 'Let me just speak instead',
+    reply:
+      "Please do — talking is easier than typing. Speak in Urdu, Hindi, Tamil or English. I'll reflect it back so you know you were understood. 🎙 Listening…",
+  },
+  {
+    id: 'r4',
+    icon: '◷',
+    label: 'I just need a moment',
+    reply:
+      "Take all the time you need. Your progress is saved — close this and come back tomorrow. The path waits for you, calmly.",
+  },
+] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Local UI atoms
@@ -227,12 +258,18 @@ export function PreferencesPage() {
     setPrefs(prev => ({ ...prev, [key]: value }));
   }
 
+  const [rayaOpen, setRayaOpen] = useState(false);
+  const [activeHelp, setActiveHelp] = useState<string | null>(null);
+  function openRaya() { setActiveHelp(null); setRayaOpen(true); }
+  function toggleHelp(id: string) { setActiveHelp(prev => prev === id ? null : id); }
+
   const isLast = section === 7;
+  const goBack = () => setSection(s => s - 1);
   const advance = () => {
     if (isLast) {
-      savePreferences(prefs as unknown as Record<string, unknown>).catch((err) =>
-        console.error('savePreferences failed:', err)
-      );
+      savePreferences(prefs as unknown as Record<string, unknown>)
+        .then(() => computePool().catch(() => {}))
+        .catch((err) => console.error('savePreferences failed:', err));
       navigate('/sakinah');
     } else {
       setSection(s => s + 1);
@@ -254,10 +291,7 @@ export function PreferencesPage() {
             <HeightSlider value={prefs.heightCm} important={prefs.heightImportant}
               onValue={v => set('heightCm', v)} onImportant={v => set('heightImportant', v)} />
           </Q>
-          <Q label="Build">
-            <Chips options={['Slim', 'Average', 'Athletic', 'Fuller', 'Not important']}
-              value={prefs.build} onChange={v => set('build', v)} />
-          </Q>
+
           <Q label="Prior marriage">
             <Chips options={['Never married only', 'Open to divorced', 'Open to widowed', 'Open to all']}
               value={prefs.priorMarriage} onChange={v => set('priorMarriage', v)} />
@@ -283,10 +317,6 @@ export function PreferencesPage() {
           <Q label="Hijab & modest dress">
             <Chips options={['Important to me', 'Preferred', 'Not important']}
               value={prefs.hijabModestDress} onChange={v => set('hijabModestDress', v)} />
-          </Q>
-          <Q label="Voluntary fasts">
-            <Chips options={['Regular', 'Occasional', 'Not important']}
-              value={prefs.voluntaryFasts} onChange={v => set('voluntaryFasts', v)} />
           </Q>
           <Q label="Lifestyle — select all that matter">
             <MultiChips options={['No smoking', 'No alcohol', 'Halal food strictly', 'Not important']}
@@ -351,10 +381,7 @@ export function PreferencesPage() {
             <Chips options={['Very close-knit', 'Moderately close', 'Independent style']}
               value={prefs.familyCloseness} onChange={v => set('familyCloseness', v)} />
           </Q>
-          <Q label="Wali involvement">
-            <Chips options={['Very involved', 'Somewhat involved', 'Minimal']}
-              value={prefs.waliInvolvement} onChange={v => set('waliInvolvement', v)} />
-          </Q>
+
         </>
       );
 
@@ -364,17 +391,9 @@ export function PreferencesPage() {
             <Chips options={['Expressive', 'Reserved', 'In between']}
               value={prefs.emotionalStyle} onChange={v => set('emotionalStyle', v)} />
           </Q>
-          <Q label="Social nature">
-            <Chips options={['Outgoing', 'Homebody', 'In between']}
-              value={prefs.socialNature} onChange={v => set('socialNature', v)} />
-          </Q>
           <Q label="Humour">
             <Chips options={['Important to me', 'Nice to have', 'Not important']}
               value={prefs.humour} onChange={v => set('humour', v)} />
-          </Q>
-          <Q label="Ambition">
-            <Chips options={['Highly driven', 'Balanced', 'Easy-going']}
-              value={prefs.ambition} onChange={v => set('ambition', v)} />
           </Q>
           <Q label="Conflict resolution">
             <Chips options={['Talk it out immediately', 'Need time first', 'Either']}
@@ -398,10 +417,7 @@ export function PreferencesPage() {
             <Chips options={['Minimal use', 'Moderate', 'Not important to me']}
               value={prefs.socialMedia} onChange={v => set('socialMedia', v)} />
           </Q>
-          <Q label="Hospitality">
-            <Chips options={['Very important', 'Occasionally', 'Not important']}
-              value={prefs.hospitality} onChange={v => set('hospitality', v)} />
-          </Q>
+
         </>
       );
 
@@ -459,7 +475,7 @@ export function PreferencesPage() {
     }}>
       <SakinahSidebar activeItem="preferences" />
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', minWidth: 0 }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', minWidth: 0, position: 'relative' }}>
 
         {/* ── Header ── */}
         <div style={{ flexShrink: 0, padding: '24px 56px 0', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
@@ -485,11 +501,27 @@ export function PreferencesPage() {
                 {meta.title}
               </div>
             </div>
-            <div style={{
-              fontSize: 10.5, color: '#5f6675',
-              fontFamily: "'JetBrains Mono', monospace", paddingBottom: 2,
-            }}>
-              {section + 1} / 8
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                fontSize: 10.5, color: '#5f6675',
+                fontFamily: "'JetBrains Mono', monospace", paddingBottom: 2,
+              }}>
+                {section + 1} / 8
+              </div>
+              <div
+                onClick={openRaya}
+                style={{
+                  width: 38, height: 38, borderRadius: '50%', cursor: 'pointer',
+                  background: 'radial-gradient(circle at 38% 32%, #f0d28f, #cf9f44 70%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: "'Cormorant Garamond', serif", fontSize: 20,
+                  color: '#3a2c0c', boxShadow: '0 4px 14px rgba(212,168,83,.3)',
+                  flexShrink: 0, transition: 'transform .2s',
+                }}
+                title="Ask Raya"
+              >
+                ر
+              </div>
             </div>
           </div>
         </div>
@@ -517,18 +549,36 @@ export function PreferencesPage() {
           borderTop: '1px solid rgba(255,255,255,.06)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <button
-            type="button"
-            onClick={advance}
-            style={{
-              background: 'none', border: 'none',
-              color: '#5f6675', fontSize: 12.5, cursor: 'pointer',
-              fontFamily: "'Manrope', sans-serif", padding: '6px 0',
-              letterSpacing: '0.02em',
-            }}
-          >
-            Skip this section
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+            {section > 0 && (
+              <button
+                type="button"
+                onClick={goBack}
+                style={{
+                  background: 'none',
+                  border: '1px solid rgba(255,255,255,.15)',
+                  color: '#9aa0ac', fontSize: 13.5, cursor: 'pointer',
+                  fontFamily: "'Manrope', sans-serif", fontWeight: 500,
+                  padding: '9px 18px', borderRadius: 10,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                ← Previous
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={advance}
+              style={{
+                background: 'none', border: 'none',
+                color: '#5f6675', fontSize: 12.5, cursor: 'pointer',
+                fontFamily: "'Manrope', sans-serif", padding: '6px 0',
+                letterSpacing: '0.02em',
+              }}
+            >
+              Skip this section
+            </button>
+          </div>
           <button
             type="button"
             onClick={advance}
@@ -544,6 +594,134 @@ export function PreferencesPage() {
             {isLast ? 'Save — see who Raya found →' : 'Continue →'}
           </button>
         </div>
+
+        {/* ── Raya scrim ───────────────────────────────────────────────── */}
+        <AnimatePresence>
+          {rayaOpen && (
+            <motion.div
+              key="scrim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setRayaOpen(false)}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(5,7,11,.6)',
+                zIndex: 90,
+                backdropFilter: 'blur(2px)',
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* ── Raya bottom sheet ─────────────────────────────────────────── */}
+        <AnimatePresence>
+          {rayaOpen && (
+            <motion.div
+              key="sheet"
+              initial={{ y: '110%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '110%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 95,
+                background: 'linear-gradient(180deg, #141b29, #0f1521)',
+                borderTop: '1px solid rgba(212,168,83,.16)',
+                borderRadius: '26px 26px 0 0',
+                padding: '20px 20px 28px',
+                maxHeight: '76%',
+                overflowY: 'auto',
+                scrollbarWidth: 'none',
+              }}
+            >
+              <div style={{ width: 38, height: 4, borderRadius: 4, background: 'rgba(212,168,83,.16)', margin: '0 auto 14px' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 12 }}>
+                <div
+                  style={{
+                    width: 40, height: 40, borderRadius: '50%',
+                    background: 'radial-gradient(circle at 38% 32%, #f0d28f, #cf9f44 70%)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: "'Cormorant Garamond', serif", fontSize: 19,
+                    color: '#3a2c0c', flexShrink: 0,
+                  }}
+                >
+                  ر
+                </div>
+                <div>
+                  <b style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, display: 'block' }}>
+                    Raya
+                  </b>
+                  <span style={{ fontSize: 10, color: '#7FB07A', letterSpacing: '0.04em' }}>
+                    ● always here to help
+                  </span>
+                </div>
+                <button
+                  onClick={() => setRayaOpen(false)}
+                  style={{
+                    marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
+                    color: '#6b7280', fontSize: 22, lineHeight: 1,
+                    minWidth: 44, minHeight: 44, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    borderRadius: 8, flexShrink: 0,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}
+                  aria-label="Close Raya panel"
+                >
+                  ×
+                </button>
+              </div>
+
+              <p style={{ fontSize: 12.5, color: '#9aa0ac', fontWeight: 300, lineHeight: 1.6, marginBottom: 14 }}>
+                Salaam. Stuck on a question, unsure how to answer, or just want to talk it through — I'm right here.
+              </p>
+
+              {RAYA_HELP.map((item) => (
+                <div key={item.id}>
+                  <div
+                    onClick={() => toggleHelp(item.id)}
+                    style={{
+                      border: '1px solid rgba(255,255,255,.06)',
+                      borderRadius: 13, padding: '12px 14px', marginBottom: 8,
+                      fontSize: 12.5, cursor: 'pointer', display: 'flex',
+                      alignItems: 'center', gap: 11, color: '#EDE7DA',
+                      transition: 'border-color .2s',
+                    }}
+                  >
+                    <span style={{ fontFamily: "'Cormorant Garamond', serif", color: '#D4A853', fontSize: 16, flexShrink: 0 }}>
+                      {item.icon}
+                    </span>
+                    {item.label}
+                  </div>
+                  <AnimatePresence>
+                    {activeHelp === item.id && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.28 }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div style={{
+                          fontSize: 12.5, color: '#EDE7DA', fontWeight: 300, lineHeight: 1.6,
+                          borderLeft: '2px solid #D4A853', padding: '4px 0 4px 13px', marginBottom: 14,
+                        }}>
+                          {item.reply}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       </main>
     </div>

@@ -16,7 +16,9 @@
       "Bash(netstat -ano)",
       "Bash(tasklist //FI \"PID eq 10396\" //FO TABLE)",
       "Bash(taskkill //PID 10396 //F)",
-      "Bash(python -m uvicorn main:app --reload)"
+      "Bash(python -m uvicorn main:app --reload)",
+      "Read(//d/Projects/sakinah-handoff/sakinah-backend/services/**)",
+      "PowerShell(Select-String -Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\main.py\" -Pattern \"pool|match|candidate\" -CaseSensitive:$false)"
     ]
   }
 }

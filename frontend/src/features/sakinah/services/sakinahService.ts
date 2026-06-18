@@ -30,6 +30,14 @@ export async function getPool() {
   return authGet('/pool/');
 }
 
+export async function computePool() {
+  return authPost('/pool/compute', {});
+}
+
+export async function getCandidate(uid: string) {
+  return authGet(`/pool/candidate/${uid}`);
+}
+
 // ── Interest ──────────────────────────────────────────────────────────
 export async function expressInterest(toUid: string) {
   return authPost('/interest/', { to_uid: toUid });

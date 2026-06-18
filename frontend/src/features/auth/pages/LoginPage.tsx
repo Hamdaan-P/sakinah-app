@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,7 +30,6 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 function LoginPage() {
-  const navigate = useNavigate();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const { signIn, signInWithGoogle, state, clearError, user } = useAuthStore();
@@ -55,16 +54,16 @@ function LoginPage() {
     if (state.type !== 'authenticated' || user?.isAnonymous) return;
     const uid = user?.id;
     if (!uid) {
-      navigate('/sakinah/niyyah');
+      window.location.href = '/sakinah/overview';
       return;
     }
     getDoc(doc(db, 'users', uid)).then((snap) => {
       const role = snap.exists() ? snap.data()?.sakinah_role : null;
-      navigate(role ? '/sakinah' : '/sakinah/niyyah');
+      window.location.href = role === 'wali' ? '/sakinah/wali-dashboard' : '/sakinah/overview';
     }).catch(() => {
-      navigate('/sakinah/niyyah');
+      window.location.href = '/sakinah/overview';
     });
-  }, [state.type, user?.isAnonymous, user?.id, navigate]);
+  }, [state.type, user?.isAnonymous, user?.id]);
 
   // Clear error when component unmounts
   useEffect(() => {

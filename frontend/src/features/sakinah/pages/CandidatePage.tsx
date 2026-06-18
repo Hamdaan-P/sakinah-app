@@ -1,114 +1,233 @@
 /**
- * CandidatePage — /sakinah/candidate
+ * CandidatePage — /sakinah/candidate/:uid
  * Stage D · A resonance: one candidate shown as a character portrait.
  * NO photo. NO rejection notification. Interest is private.
  * A pass is silent — never shown to the other person.
  * Express interest is a server-authoritative write — client only initiates.
- * TODO: accept /:uid param and fetch from sakinahService.getCandidate(uid) when service is wired.
  */
 
-import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRef, useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
-import { useAuthStore } from '@/core/stores/auth.store';
-import { expressInterest } from '../services/sakinahService';
+import { expressInterest, getCandidate } from '../services/sakinahService';
 import '../sakinah.css';
 
 const PAGE_BG =
   'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), #07090f';
 
-// Placeholder candidate — replace with sakinahService.getCandidate(uid) when service is wired.
-const MOCK_CANDIDATE = {
-  uid: 'f1',
-  initial: 'ف',
-  name: 'Fatima',
-  age: 27,
-  city: 'Chennai',
-  tradition: 'Sunni Hanafi',
-  waliLinked: true,
-} as const;
+const RAYA_HELP = [
+  {
+    id: 'r1',
+    icon: '☉',
+    label: 'Help me reflect on this person',
+    reply:
+      "Read the resonance points slowly — each one is something Raya noticed where your portraits speak to each other. There is no right answer, only an honest one.",
+  },
+  {
+    id: 'r2',
+    icon: '?',
+    label: 'What does "express interest" mean?',
+    reply:
+      "It means you're open to a conversation — nothing more. It stays completely private. She only finds out if there's a mutual yes.",
+  },
+  {
+    id: 'r3',
+    icon: '⌥',
+    label: "I'm unsure — is that okay?",
+    reply:
+      "Uncertainty is honest. You don't need certainty to take one step. Curiosity is enough to begin.",
+  },
+  {
+    id: 'r4',
+    icon: '◷',
+    label: 'I just need a moment',
+    reply:
+      "Take all the time you need. She won't know you visited. Nothing moves without your intention.",
+  },
+] as const;
 
-// Resonance points derived from both portraits — never raw answers.
-// TODO: generate server-side after mutual portrait completion.
-const RESONANCE_POINTS: Array<{ key: string; parts: React.ReactNode }> = [
-  {
-    key: 'r1',
-    parts: (
-      <>
-        Shared intention:{' '}
-        <b style={{ color: '#EDE7DA', fontWeight: 600 }}>a home of calm and worship</b>
-      </>
-    ),
-  },
-  {
-    key: 'r2',
-    parts: (
-      <>
-        You both bring{' '}
-        <b style={{ color: '#EDE7DA', fontWeight: 600 }}>steadiness</b>, value{' '}
-        <b style={{ color: '#EDE7DA', fontWeight: 600 }}>quiet generosity</b>
-      </>
-    ),
-  },
-  {
-    key: 'r3',
-    parts: (
-      <>
-        Both{' '}
-        <b style={{ color: '#EDE7DA', fontWeight: 600 }}>learning to let people in</b>
-      </>
-    ),
-  },
-  {
-    key: 'r4',
-    parts: (
-      <>
-        Same tradition —{' '}
-        <b style={{ color: '#EDE7DA', fontWeight: 600 }}>Sunni Hanafi</b>
-      </>
-    ),
-  },
-];
+interface CandidateProfile {
+  uid: string;
+  display_name: string;
+  age: number | null;
+  city: string;
+  maslak: string;
+  bio: string;
+  wali_linked: boolean;
+  gender: string;
+}
 
 export function CandidatePage() {
+  const { uid }  = useParams<{ uid: string }>();
   const navigate = useNavigate();
-  const user     = useAuthStore((s) => s.user);
-  void user; // placeholder — consumed by TODO sakinahService calls below
   const acting   = useRef(false);
 
-  const [passing, setPassing]             = useState(false);
+  const [candidate, setCandidate]             = useState<CandidateProfile | null>(null);
+  const [loadError, setLoadError]             = useState<string | null>(null);
+  const [passing, setPassing]                 = useState(false);
   const [interestPending, setInterestPending] = useState(false);
+  const [rayaOpen, setRayaOpen]               = useState(false);
+  const [activeHelp, setActiveHelp]           = useState<string | null>(null);
+
+  function openRaya() { setActiveHelp(null); setRayaOpen(true); }
+  function toggleHelp(id: string) { setActiveHelp(prev => prev === id ? null : id); }
+
+  useEffect(() => {
+    if (!uid) {
+      setLoadError('No candidate specified.');
+      return;
+    }
+    getCandidate(uid)
+      .then((data: any) => setCandidate(data as CandidateProfile))
+      .catch(() => setLoadError('Could not load this candidate. Please go back and try again.'));
+  }, [uid]);
+
+  const name    = candidate?.display_name ?? '';
+  const initial = name[0] ?? '?';
+  const age     = candidate?.age ?? null;
+  const city    = candidate?.city ?? '';
+  const maslak  = candidate?.maslak ?? '';
+
+  const resonancePoints: Array<{ key: string; parts: React.ReactNode }> = candidate
+    ? [
+        {
+          key: 'r1',
+          parts: (
+            <>
+              Shared intention:{' '}
+              <b style={{ color: '#EDE7DA', fontWeight: 600 }}>a home of calm and worship</b>
+            </>
+          ),
+        },
+        {
+          key: 'r2',
+          parts: (
+            <>
+              You both bring{' '}
+              <b style={{ color: '#EDE7DA', fontWeight: 600 }}>steadiness</b>
+              {' · '}
+              <b style={{ color: '#EDE7DA', fontWeight: 600 }}>quiet generosity</b>
+            </>
+          ),
+        },
+        {
+          key: 'r3',
+          parts: (
+            <>
+              Both{' '}
+              <b style={{ color: '#EDE7DA', fontWeight: 600 }}>learning to let people in</b>
+            </>
+          ),
+        },
+        ...(maslak
+          ? [
+              {
+                key: 'r4',
+                parts: (
+                  <>
+                    Same tradition —{' '}
+                    <b style={{ color: '#EDE7DA', fontWeight: 600 }}>{maslak}</b>
+                  </>
+                ),
+              },
+            ]
+          : []),
+      ]
+    : [];
+
+  const metaLine = [
+    city,
+    maslak,
+    'Verified',
+    candidate?.wali_linked ? 'Wali linked' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   function handlePass() {
     if (acting.current) return;
     acting.current = true;
-    // A pass is always silent — never shown to the other person as rejection.
-    // TODO: authPost('/sakinah/pass', { seeker: user?.id, targetUid: MOCK_CANDIDATE.uid })
     setPassing(true);
     setTimeout(() => navigate('/sakinah'), 1800);
   }
 
   async function handleExpressInterest() {
-    if (acting.current || interestPending) return;
+    if (acting.current || interestPending || !candidate) return;
     acting.current = true;
     setInterestPending(true);
-    const result = await expressInterest(MOCK_CANDIDATE.uid);
-    if (result.match_id) {
-      setTimeout(() => navigate(`/sakinah/matchflow/${result.match_id}`), 700);
-    } else {
-      setTimeout(() => navigate('/sakinah'), 700);
+    try {
+      const result: any = await expressInterest(candidate.uid);
+      if (result.match_id) {
+        setTimeout(() => navigate(`/sakinah/matchflow/${result.match_id}`), 700);
+      } else {
+        setTimeout(() => navigate('/sakinah'), 700);
+      }
+    } catch {
+      acting.current = false;
+      setInterestPending(false);
     }
   }
 
-  const metaLine = [
-    MOCK_CANDIDATE.city,
-    MOCK_CANDIDATE.tradition,
-    'Verified',
-    MOCK_CANDIDATE.waliLinked ? 'Wali linked' : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  // ── Loading state ──────────────────────────────────────────────────────────
+  if (!candidate && !loadError) {
+    return (
+      <div
+        style={{
+          display: 'flex', height: '100vh', background: PAGE_BG,
+          color: '#EDE7DA', fontFamily: "'Manrope', sans-serif",
+          WebkitFontSmoothing: 'antialiased', overflow: 'hidden',
+        }}
+      >
+        <SakinahSidebar activeItem="a-resonance" />
+        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <motion.div
+            animate={{ opacity: [0.3, 0.7, 0.3] }}
+            transition={{ duration: 1.6, repeat: Infinity }}
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: 40, color: 'rgba(212,168,83,.35)',
+            }}
+          >
+            ۞
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
+
+  // ── Error state ────────────────────────────────────────────────────────────
+  if (loadError) {
+    return (
+      <div
+        style={{
+          display: 'flex', height: '100vh', background: PAGE_BG,
+          color: '#EDE7DA', fontFamily: "'Manrope', sans-serif",
+          WebkitFontSmoothing: 'antialiased', overflow: 'hidden',
+        }}
+      >
+        <SakinahSidebar activeItem="a-resonance" />
+        <main
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 16,
+          }}
+        >
+          <p style={{ fontSize: 13, color: '#9aa0ac', fontWeight: 300 }}>{loadError}</p>
+          <button
+            onClick={() => navigate('/sakinah')}
+            style={{
+              background: 'none', border: '1px solid rgba(212,168,83,.3)',
+              color: '#e7c984', fontSize: 12.5, padding: '9px 20px',
+              borderRadius: 10, cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
+            }}
+          >
+            ← Back to your pool
+          </button>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -131,6 +250,7 @@ export function CandidatePage() {
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          position: 'relative',
         }}
       >
         {/* ── Header ───────────────────────────────────────────────────── */}
@@ -287,7 +407,7 @@ export function CandidatePage() {
                       color: '#EDE7DA',
                     }}
                   >
-                    {MOCK_CANDIDATE.initial}
+                    {initial}
                   </div>
 
                   {/* Name */}
@@ -299,7 +419,7 @@ export function CandidatePage() {
                       color: '#EDE7DA',
                     }}
                   >
-                    {MOCK_CANDIDATE.name} · {MOCK_CANDIDATE.age}
+                    {name} · {age}
                   </div>
 
                   {/* Meta */}
@@ -323,7 +443,7 @@ export function CandidatePage() {
                       margin: '16px 0 4px',
                     }}
                   >
-                    {RESONANCE_POINTS.map((point, i) => (
+                    {resonancePoints.map((point, i) => (
                       <motion.div
                         key={point.key}
                         initial={{ opacity: 0, x: -6 }}
@@ -451,6 +571,258 @@ export function CandidatePage() {
 
           </div>
         </div>
+        {/* ── Raya FAB ─────────────────────────────────────────────────── */}
+        <div
+          style={{
+            position: 'absolute',
+            right: 20,
+            bottom: 22,
+            zIndex: 80,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 9,
+            cursor: 'pointer',
+          }}
+          onClick={openRaya}
+        >
+          <AnimatePresence>
+            {!rayaOpen && (
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ delay: 3.4, duration: 0.4 }}
+                style={{
+                  background: 'rgba(8,11,17,.92)',
+                  border: '1px solid rgba(212,168,83,.16)',
+                  borderRadius: 30,
+                  padding: '8px 14px',
+                  fontSize: 11,
+                  color: '#e7c984',
+                  whiteSpace: 'nowrap',
+                  fontWeight: 300,
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
+                Need help?{' '}
+                <b style={{ color: '#EDE7DA', fontWeight: 500 }}>Raya's here.</b>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div
+            className="sk-raya-halo"
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle at 38% 32%, #f0d28f, #cf9f44 70%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: 24,
+              color: '#3a2c0c',
+              boxShadow: '0 8px 22px rgba(212,168,83,.35)',
+              position: 'relative',
+              flexShrink: 0,
+              transition: 'transform .2s',
+            }}
+          >
+            ر
+          </div>
+        </div>
+
+        {/* ── Raya scrim ───────────────────────────────────────────────── */}
+        <AnimatePresence>
+          {rayaOpen && (
+            <motion.div
+              key="scrim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setRayaOpen(false)}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(5,7,11,.6)',
+                zIndex: 90,
+                backdropFilter: 'blur(2px)',
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* ── Raya bottom sheet ─────────────────────────────────────────── */}
+        <AnimatePresence>
+          {rayaOpen && (
+            <motion.div
+              key="sheet"
+              initial={{ y: '110%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '110%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 95,
+                background: 'linear-gradient(180deg, #141b29, #0f1521)',
+                borderTop: '1px solid rgba(212,168,83,.16)',
+                borderRadius: '26px 26px 0 0',
+                padding: '20px 20px 28px',
+                maxHeight: '76%',
+                overflowY: 'auto',
+                scrollbarWidth: 'none',
+              }}
+            >
+              {/* Grab handle */}
+              <div
+                style={{
+                  width: 38,
+                  height: 4,
+                  borderRadius: 4,
+                  background: 'rgba(212,168,83,.16)',
+                  margin: '0 auto 14px',
+                }}
+              />
+
+              {/* Sheet header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 12 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle at 38% 32%, #f0d28f, #cf9f44 70%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontSize: 19,
+                    color: '#3a2c0c',
+                    flexShrink: 0,
+                  }}
+                >
+                  ر
+                </div>
+                <div>
+                  <b
+                    style={{
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontSize: 20,
+                      fontWeight: 500,
+                      display: 'block',
+                    }}
+                  >
+                    Raya
+                  </b>
+                  <span style={{ fontSize: 10, color: '#7FB07A', letterSpacing: '0.04em' }}>
+                    ● always here to help
+                  </span>
+                </div>
+                <button
+                  onClick={() => setRayaOpen(false)}
+                  style={{
+                    marginLeft: 'auto',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#6b7280',
+                    fontSize: 22,
+                    lineHeight: 1,
+                    minWidth: 44,
+                    minHeight: 44,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}
+                  aria-label="Close Raya panel"
+                >
+                  ×
+                </button>
+              </div>
+
+              <p
+                style={{
+                  fontSize: 12.5,
+                  color: '#9aa0ac',
+                  fontWeight: 300,
+                  lineHeight: 1.6,
+                  marginBottom: 14,
+                }}
+              >
+                This is where character speaks before a face does. Take your time reflecting
+                on what truly matters.
+              </p>
+
+              {/* Help chips */}
+              {RAYA_HELP.map((item) => (
+                <div key={item.id}>
+                  <div
+                    onClick={() => toggleHelp(item.id)}
+                    style={{
+                      border: '1px solid rgba(255,255,255,.06)',
+                      borderRadius: 13,
+                      padding: '12px 14px',
+                      marginBottom: 8,
+                      fontSize: 12.5,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 11,
+                      color: '#EDE7DA',
+                      transition: 'border-color .2s, background .2s',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "'Cormorant Garamond', serif",
+                        color: '#D4A853',
+                        fontSize: 16,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {item.icon}
+                    </span>
+                    {item.label}
+                  </div>
+                  <AnimatePresence>
+                    {activeHelp === item.id && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.28 }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 12.5,
+                            color: '#EDE7DA',
+                            fontWeight: 300,
+                            lineHeight: 1.6,
+                            borderLeft: '2px solid #D4A853',
+                            padding: '4px 0 4px 13px',
+                            marginBottom: 14,
+                          }}
+                        >
+                          {item.reply}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </main>
     </div>
   );

@@ -734,7 +734,7 @@ export const router = createBrowserRouter([
     errorElement: <RootErrorBoundary />,
   },
   {
-    path: '/sakinah/candidate',
+    path: '/sakinah/candidate/:uid',
     element: <LazyPage Component={SakinahCandidatePage} />,
     errorElement: <RootErrorBoundary />,
   },

@@ -7,6 +7,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAuth, signInWithPhoneNumber, signInWithEmailAndPassword, RecaptchaVerifier } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '@/config/firebase.config';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import { initiateKyc, submitKyc } from '../services/sakinahService';
 
@@ -36,6 +38,7 @@ export function RegisterPage() {
   const [selectedId, setSelectedId]   = useState('Aadhaar · DigiLocker');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging]   = useState(false);
+  const [city, setCity]               = useState('');
   const [shakingId, setShakingId]     = useState<string | null>(null);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [kycSessionId, setKycSessionId] = useState<string>('');
@@ -64,13 +67,14 @@ export function RegisterPage() {
 
   // ── Step 1: Phone ────────────────────────────────────────────────────────
   const sendOtp = async () => {
+    if (!city.trim()) { shake('city-field'); return; }
     if (phone.length < 10) return;
 
     // DEV BYPASS for test number
     if (phone === '9999999999') {
       await signInWithEmailAndPassword(getAuth(), 'ahmed@test.com', 'Test1234!');
       setTimeout(() => {
-        window.location.href = '/sakinah/considered-few';
+        window.location.href = '/sakinah';
       }, 1500);
       return;
     }
@@ -255,6 +259,10 @@ export function RegisterPage() {
         const idBase64 = selfieBase64; // use selfie as placeholder for ID doc in dev
         await submitKyc(kycSessionId, idBase64, selfieBase64);
       }
+      const uid = getAuth().currentUser?.uid;
+      if (uid && city.trim()) {
+        await setDoc(doc(db, 'sakinah_profiles', uid), { city: city.trim(), uid }, { merge: true });
+      }
       goTo(5);
     } catch (e) {
       console.error('KYC submit failed:', e);
@@ -357,6 +365,17 @@ export function RegisterPage() {
               {/* ── Step 1: Phone ── */}
               {step === 1 && (
                 <div>
+                  <label style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(212,168,83,.55)', display: 'block', marginBottom: 9 }}>
+                    City
+                  </label>
+                  <div className={`sk-field-group${shakingId === 'city-field' ? ' sk-shake' : ''}`} style={{ display: 'flex', border: '1px solid rgba(255,255,255,.06)', borderRadius: 13, overflow: 'hidden', background: 'rgba(255,255,255,.018)', marginBottom: 14 }}>
+                    <input
+                      type="text" placeholder="e.g. Mumbai" autoComplete="address-level2"
+                      value={city} onChange={e => setCity(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && sendOtp()}
+                      style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', padding: '14px 16px', fontFamily: "'Manrope', sans-serif", fontSize: 14, color: '#EDE7DA', outline: 'none' }}
+                    />
+                  </div>
                   <label style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(212,168,83,.55)', display: 'block', marginBottom: 9 }}>
                     Your phone number
                   </label>

@@ -257,8 +257,8 @@ export function WaliDashboardPage() {
           </motion.div>
         )}
 
-        {/* ── Waiting message ── */}
-        <motion.div
+        {/* ── Waiting message — only when no active journeys ── */}
+        {!loading && conversations.length === 0 && <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
@@ -287,7 +287,7 @@ export function WaliDashboardPage() {
             When your son or daughter invites you from within their conversation,
             their journey will appear here — in sha Allah.
           </p>
-        </motion.div>
+        </motion.div>}
 
         {/* ── Journeys section ── */}
         <motion.div

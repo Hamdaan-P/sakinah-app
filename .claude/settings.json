@@ -15,7 +15,10 @@
       "Bash(jobs)",
       "Bash(python create_wali_user.py)",
       "Bash(python seed_roles.py)",
-      "Bash(python reset_wali.py)"
+      "Bash(python reset_wali.py)",
+      "Bash(ls -la \"d:\\\\Projects\\\\sakinah-handoff\\\\\" 2>/dev/null)",
+      "Read(//d/Projects/sakinah-handoff\" 2>/dev/**)",
+      "PowerShell(Get-ChildItem \"d:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\\" -File | Where-Object {$_.Extension -eq \".py\"})"
     ]
   }
 }

@@ -42,13 +42,13 @@ class PreferencesPayload(BaseModel):
     ageMax: int
     heightImportant: bool
     heightCm: int
-    build: str
+    build: Optional[str] = ""
     priorMarriage: str
     childrenFromPrev: str
     dailySalah: str
     quranRelationship: str
     hijabModestDress: str
-    voluntaryFasts: str
+    voluntaryFasts: Optional[str] = ""
     lifestyle: list[str]
     educationLevel: str
     career: str
@@ -61,16 +61,16 @@ class PreferencesPayload(BaseModel):
     children: str
     parentingApproach: str
     familyCloseness: str
-    waliInvolvement: str
+    waliInvolvement: Optional[str] = ""
     emotionalStyle: str
-    socialNature: str
+    socialNature: Optional[str] = ""
     humour: str
-    ambition: str
+    ambition: Optional[str] = ""
     conflictResolution: str
     diet: str
     sharedInterests: list[str]
     socialMedia: str
-    hospitality: str
+    hospitality: Optional[str] = ""
     hardLines: list[str]
     polygynyStance: str
     decisionTimeline: str
