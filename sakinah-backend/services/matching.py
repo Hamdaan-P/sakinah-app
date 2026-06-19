@@ -136,6 +136,8 @@ def get_pool(uid: str, db) -> list[dict]:
     passed_uids: set[str] = set()
     for s in db.collection("sakinah_signals").where("from_uid", "==", uid).where("signal_type", "==", "pass").stream():
         passed_uids.add(s.to_dict()["to_uid"])
+    for p in db.collection("sakinah_passes").where("from_uid", "==", uid).stream():
+        passed_uids.add(p.to_dict()["on_uid"])
 
     # -- Fetch candidate profiles --
     candidates_raw = list(
@@ -209,6 +211,24 @@ def express_interest(from_uid: str, to_uid: str, db) -> dict:
         "created_at": now,
     })
 
+    # Notify the recipient — fetch sender's display name and gender first
+    from_user_data = (db.collection("users").document(from_uid).get().to_dict()) or {}
+    from_name   = (from_user_data.get("display_name")
+                   or from_user_data.get("full_name")
+                   or from_user_data.get("name")
+                   or "Someone")
+    from_gender = from_user_data.get("gender") or ""
+    notif_id = str(uuid.uuid4())
+    db.collection("sakinah_notifications").document(notif_id).set({
+        "to_uid":      to_uid,
+        "from_uid":    from_uid,
+        "from_name":   from_name,
+        "from_gender": from_gender,
+        "type":        "interest_expressed",
+        "read":        False,
+        "created_at":  now,
+    })
+
     # Check whether the other person has already expressed interest in from_uid.
     # This query requires a composite index on (from_uid, to_uid, signal_type).
     mutual_results = (
@@ -258,6 +278,14 @@ def silent_pass(from_uid: str, to_uid: str, db) -> dict:
         "to_uid": to_uid,
         "signal_type": "pass",
         "is_mutual": False,
+        "created_at": now,
+    })
+
+    # Permanent pass record — survives restarts and re-logins
+    pass_id = str(uuid.uuid4())
+    db.collection("sakinah_passes").document(pass_id).set({
+        "from_uid":   from_uid,
+        "on_uid":     to_uid,
         "created_at": now,
     })
 

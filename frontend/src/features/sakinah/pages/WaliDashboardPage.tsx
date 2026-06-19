@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAuth } from 'firebase/auth';
+import { collection, query, where, getDocs, doc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/config/firebase.config';
 import { getWaliConversations, getPendingWaliInvites, acceptWaliInvite, declineWaliInvite, getWaliNotifications } from '../services/sakinahService';
 import '../sakinah.css';
 
@@ -34,9 +36,25 @@ export function WaliDashboardPage() {
   const [pendingInvites, setPendingInvites] = useState<WaliInvite[]>([]);
   const [actedInvites, setActedInvites] = useState<Record<string, 'accepted' | 'declined'>>({});
   const [waliNotifications, setWaliNotifications] = useState<any[]>([]);
+  const [convInvites, setConvInvites] = useState<any[]>([]);
 
   const user = getAuth().currentUser;
   const waliName = user?.displayName || 'Guardian';
+
+  useEffect(() => {
+    const uid = user?.uid;
+    if (!uid) return;
+    getDocs(query(
+      collection(db, 'sakinah_notifications'),
+      where('to_uid', '==', uid),
+      where('type', '==', 'wali_conversation_invite'),
+    ))
+      .then(snap => {
+        const invites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setConvInvites(invites);
+      })
+      .catch(console.error);
+  }, [user?.uid]);
 
   const loadData = async () => {
     try {
@@ -257,8 +275,97 @@ export function WaliDashboardPage() {
           </motion.div>
         )}
 
+        {/* ── Conversation observe invitations ── */}
+        {convInvites.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.06 }}
+            style={{ marginBottom: 28 }}
+          >
+            <div
+              style={{
+                fontSize: 9.5, fontFamily: "'JetBrains Mono', monospace",
+                letterSpacing: '0.22em', textTransform: 'uppercase',
+                color: '#C9A84C', marginBottom: 12,
+              }}
+            >
+              Invited to observe
+            </div>
+
+            {convInvites.map((invite) => (
+              <div
+                key={invite.id}
+                style={{
+                  border: '1px solid rgba(201,168,76,.35)',
+                  borderRadius: 16, padding: '18px 20px',
+                  background: 'rgba(201,168,76,.04)',
+                  marginBottom: 10,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontSize: 17, fontWeight: 500,
+                    color: '#EDE7DA', marginBottom: 10,
+                  }}
+                >
+                  {invite.from_name} has invited you to observe their conversation
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={async () => {
+                      const uid = user?.uid;
+                      if (!uid) return;
+                      await Promise.all([
+                        updateDoc(doc(db, 'sakinah_notifications', invite.id), { read: true, status: 'accepted' }),
+                        setDoc(doc(db, 'sakinah_wali_access', `${invite.match_id}_${uid}`), {
+                          match_id: invite.match_id,
+                          wali_uid: uid,
+                          granted_at: serverTimestamp(),
+                        }),
+                      ]).catch(console.error);
+                      navigate(`/sakinah/conversation?matchId=${invite.match_id}`);
+                    }}
+                    style={{
+                      border: '1px solid rgba(212,168,83,.28)',
+                      borderRadius: 12,
+                      padding: '9px 18px',
+                      background: 'rgba(212,168,83,.06)',
+                      color: '#e7c984',
+                      fontFamily: "'Manrope', sans-serif",
+                      fontSize: 12.5, fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Accept & View Conversation →
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateDoc(doc(db, 'sakinah_notifications', invite.id), { read: true, status: 'declined' }).catch(console.error);
+                      setConvInvites(prev => prev.filter(i => i.id !== invite.id));
+                    }}
+                    style={{
+                      border: '1px solid rgba(255,255,255,.08)',
+                      borderRadius: 12,
+                      padding: '9px 18px',
+                      background: 'transparent',
+                      color: 'rgba(255,255,255,.35)',
+                      fontFamily: "'Manrope', sans-serif",
+                      fontSize: 12.5, fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+
         {/* ── Waiting message — only when no active journeys ── */}
-        {!loading && conversations.length === 0 && <motion.div
+        {!loading && conversations.length === 0 && convInvites.length === 0 && <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
@@ -284,7 +391,7 @@ export function WaliDashboardPage() {
               lineHeight: 1.65, margin: 0,
             }}
           >
-            When your son or daughter invites you from within their conversation,
+            When your daughter, sister or niece invites you from within their conversation,
             their journey will appear here — in sha Allah.
           </p>
         </motion.div>}

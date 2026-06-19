@@ -120,7 +120,7 @@ export function MatchFlowPage() {
   }, [mutualYes, matchId]);
 
   const rayaMessage = mutualYes
-    ? "You have both chosen to walk forward, with sincerity and good intention. May Allah bless this step. 🤍"
+    ? "Character was seen before the face. This is how it was always meant to begin."
     : iExpressedInterest
     ? `Your interest has been sent quietly. ${matchName} will see it when ${matchGender === 'female' ? 'she' : 'he'} is ready. Take your time — there is no rush.`
     : `The person whose character you reflected on has expressed ${matchGender === 'female' ? 'her' : 'his'} interest in you. ${matchGender === 'female' ? 'Her' : 'His'} name is ${matchName}.`;
@@ -319,6 +319,52 @@ export function MatchFlowPage() {
             >
               {mutualYes ? (
                 <>
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  style={{ textAlign: 'center', margin: '0 0 1.75rem' }}
+                >
+                  <div style={{
+                    display: 'inline-block',
+                    background: 'rgba(212,168,83,.07)',
+                    border: '1px solid rgba(212,168,83,.3)',
+                    borderRadius: 16,
+                    padding: '20px 28px',
+                    maxWidth: 400,
+                  }}>
+                    <div style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 9,
+                      color: 'rgba(212,168,83,.55)',
+                      letterSpacing: '0.2em',
+                      textTransform: 'uppercase',
+                      marginBottom: 12,
+                    }}>
+                      Mutual interest
+                    </div>
+                    <p style={{
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontSize: 22,
+                      fontWeight: 500,
+                      color: '#EDE7DA',
+                      lineHeight: 1.45,
+                      margin: '0 0 10px',
+                    }}>
+                      You have both stepped forward with sincerity.
+                    </p>
+                    <p style={{
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontStyle: 'italic',
+                      fontSize: 17,
+                      color: '#D4A853',
+                      margin: 0,
+                      lineHeight: 1.5,
+                    }}>
+                      May Allah bless this path.
+                    </p>
+                  </div>
+                </motion.div>
                 {mutualYes && matchPhotoUrl && (
                   <div style={{ textAlign: 'center', margin: '2rem 0 1.5rem' }}>
                     <p style={{ fontFamily: 'Georgia, serif', color: '#c9a96e', fontSize: '0.9rem', marginBottom: '1rem', fontStyle: 'italic' }}>

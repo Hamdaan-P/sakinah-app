@@ -5,7 +5,9 @@ from firebase_admin_setup import get_firestore_client
 from services import raya_service
 import uuid
 import re
+import json
 from datetime import datetime, timezone
+import anthropic as anthropic_sdk
 
 _CONTACT_INFO_PATTERNS = [
     re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"),
@@ -100,6 +102,48 @@ async def get_conversation(
     }
 
 
+_TONE_SYSTEM_PROMPT = """You are a tone moderator for Sakinah, a dignified Islamic matrimonial app. Evaluate the message and respond ONLY with a JSON object in this exact format with no other text:
+{
+  "violation": true or false,
+  "type": "intimacy" or "rude" or "none",
+  "reason": "brief reason in one sentence"
+}
+
+Rules:
+- intimacy: any flirtatious, romantic, sensual, sexual or immodest content — even subtle (pet names, physical compliments, suggestive language)
+- rude: any disrespectful, condescending, insulting, aggressive or ill-mannered language — evaluate the FULL MEANING and INTENT of the sentence, not just specific words
+- none: message is appropriate and respectful
+- When in doubt about rudeness, flag it as rude"""
+
+
+class CheckToneBody(BaseModel):
+    message: str
+
+
+@router.post("/check-tone")
+async def check_tone(
+    body: CheckToneBody,
+    decoded_token: dict = Depends(verify_token),
+):
+    client = anthropic_sdk.Anthropic()
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=256,
+            system=_TONE_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": body.message}],
+        )
+        result = json.loads(response.content[0].text)
+        return {
+            "violation": bool(result.get("violation", False)),
+            "type": result.get("type", "none"),
+            "reason": result.get("reason", ""),
+        }
+    except Exception as e:
+        print(f"[check-tone] Anthropic call failed: {e}")
+        return {"violation": False, "type": "none", "reason": "check unavailable"}
+
+
 class SendMessageBody(BaseModel):
     match_id: str
     message: str
@@ -142,7 +186,10 @@ async def invite_wali(
     uid = decoded_token["uid"]
     db = get_firestore_client()
     print(f"[invite-wali] HIT — uid={uid} match_id={match_id}")
-    _get_match_or_403(match_id, uid, db)
+    match = _get_match_or_403(match_id, uid, db)
+
+    wali_unlocked: list[str] = match.get("unlocked_topics", [])
+    wali_current_topic = wali_unlocked[-1] if wali_unlocked else TOPICS_SEQUENCE[0]
 
     db.collection("sakinah_matches").document(match_id).update({"wali_present": True})
 
@@ -153,6 +200,7 @@ async def invite_wali(
         "match_id": match_id,
         "from_uid": "raya",
         "message_type": "wali_invite",
+        "topic_name": wali_current_topic,
         "text": raya_service.get_wali_invite_message(),
         "created_at": now,
     })
@@ -190,6 +238,7 @@ async def signal_ready_next(
     unlocked: list[str] = fresh.get("unlocked_topics", [])
     next_topic = next((t for t in TOPICS_SEQUENCE if t not in unlocked), None)
     is_last_topic = next_topic is None
+    current_topic = unlocked[-1] if unlocked else TOPICS_SEQUENCE[0]
 
     if not partner_is_ready:
         # Send a gentle nudge to the partner — but only on the first signal,
@@ -212,6 +261,7 @@ async def signal_ready_next(
                 "match_id": match_id,
                 "from_uid": "raya",
                 "message_type": "ready_nudge",
+                "topic_name": current_topic,
                 "text": nudge_text,
                 "created_at": now,
             })

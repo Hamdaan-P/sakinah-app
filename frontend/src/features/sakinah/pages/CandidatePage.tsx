@@ -10,7 +10,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
-import { expressInterest, getCandidate } from '../services/sakinahService';
+import { expressInterest, getCandidate, silentPass } from '../services/sakinahService';
 import '../sakinah.css';
 
 const PAGE_BG =
@@ -146,8 +146,9 @@ export function CandidatePage() {
     .join(' · ');
 
   function handlePass() {
-    if (acting.current) return;
+    if (acting.current || !candidate) return;
     acting.current = true;
+    silentPass(candidate.uid).catch(console.error);
     setPassing(true);
     setTimeout(() => navigate('/sakinah'), 1800);
   }

@@ -97,6 +97,10 @@ export async function getConversation(matchId: string) {
   return authGet(`/conversation/${matchId}`);
 }
 
+export async function checkTone(message: string): Promise<{ violation: boolean; type: 'intimacy' | 'rude' | 'none'; reason: string }> {
+  return authPost('/conversation/check-tone', { message });
+}
+
 export async function sendMessage(matchId: string, message: string) {
   return authPost('/conversation/', { match_id: matchId, message });
 }

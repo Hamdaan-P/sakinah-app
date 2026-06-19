@@ -27,6 +27,7 @@ COLLECTIONS_TO_WIPE = [
     "sakinah_messages",
     "wali_requests",
     "wali_notifications",
+    "sakinah_notifications",
 ]
 
 

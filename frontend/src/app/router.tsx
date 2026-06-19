@@ -749,6 +749,11 @@ export const router = createBrowserRouter([
     errorElement: <RootErrorBoundary />,
   },
   {
+    path: '/sakinah/conversation',
+    element: <LazyPage Component={SakinahConversationPage} />,
+    errorElement: <RootErrorBoundary />,
+  },
+  {
     path: '/sakinah/decision/:matchId',
     element: <LazyPage Component={SakinahDecisionPage} />,
     errorElement: <RootErrorBoundary />,

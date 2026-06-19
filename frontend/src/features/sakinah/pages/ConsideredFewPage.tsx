@@ -6,11 +6,14 @@
  * TODO: replace MOCK_POOL with sakinahService.getCuratedPool(user.id) once service layer is wired.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import { usePool } from '../hooks';
+import { onAuthStateChanged } from 'firebase/auth';
+import { db, auth } from '@/config/firebase.config';
 import '../sakinah.css';
 
 const PAGE_BG =
@@ -60,6 +63,71 @@ export function ConsideredFewPage() {
 
   const [rayaOpen, setRayaOpen] = useState(false);
   const [activeHelp, setActiveHelp] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) return;
+      const q = query(
+        collection(db, 'sakinah_notifications'),
+        where('to_uid', '==', user.uid),
+        where('type', '==', 'interest_expressed'),
+      );
+      getDocs(q)
+        .then(snap => {
+          const unread = snap.docs
+            .filter(d => d.data().read === false)
+            .map(d => ({ id: d.id, ...d.data() }));
+          setNotifications(unread);
+        })
+        .catch(console.error);
+    });
+    return () => unsub();
+  }, []);
+
+  // Real-time listener — redirects User A the moment mutual interest is confirmed.
+  // Firestore does not support OR across different fields, so two queries are required.
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    const handleSnap = (snap: any) => {
+      const match = snap.docs.find((d: any) => {
+        const data = d.data();
+        return data.mutual_yes === true && data.decision_outcome === null;
+      });
+      if (match) {
+        navigate(`/sakinah/matchflow/${match.data().match_id}`);
+      }
+    };
+
+    const qA = query(
+      collection(db, 'sakinah_matches'),
+      where('user_a_uid', '==', uid),
+      where('mutual_yes', '==', true),
+      where('decision_outcome', '==', null),
+    );
+    const qB = query(
+      collection(db, 'sakinah_matches'),
+      where('user_b_uid', '==', uid),
+      where('mutual_yes', '==', true),
+      where('decision_outcome', '==', null),
+    );
+
+    const unsubA = onSnapshot(qA, handleSnap, console.error);
+    const unsubB = onSnapshot(qB, handleSnap, console.error);
+
+    return () => { unsubA(); unsubB(); };
+  }, [navigate]);
+
+  const dismissNotification = async (notifId: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== notifId));
+    try {
+      await updateDoc(doc(db, 'sakinah_notifications', notifId), { read: true });
+    } catch (e) {
+      console.error('Failed to mark notification read:', e);
+    }
+  };
   function openRaya() { setActiveHelp(null); setRayaOpen(true); }
   function toggleHelp(id: string) { setActiveHelp(prev => prev === id ? null : id); }
 
@@ -152,6 +220,68 @@ export function ConsideredFewPage() {
           style={{ flex: 1, overflowY: 'auto', padding: '28px 56px 80px' }}
         >
           <div style={{ maxWidth: 520, width: '100%' }}>
+
+            {/* ── Interest notifications ──────────────────────────────────── */}
+            <AnimatePresence>
+              {notifications.length > 0 && (() => {
+                const notif = notifications[0];
+                const pronoun = notif.from_gender === 'male' ? 'his' : 'her';
+                return (
+                  <motion.div
+                    key={notif.id}
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.35 }}
+                    style={{
+                      background: 'rgba(212,168,83,.07)',
+                      border: '1px solid rgba(212,168,83,.35)',
+                      borderRadius: 15,
+                      padding: '14px 16px',
+                      marginBottom: 16,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{
+                      width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                      background: 'radial-gradient(circle at 38% 32%, rgba(212,168,83,.45), rgba(185,139,57,.2))',
+                      border: '1px solid rgba(212,168,83,.35)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: '#D4A853',
+                    }}>
+                      ◉
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: '0 0 4px', fontSize: 13.5, color: '#EDE7DA', fontWeight: 500, lineHeight: 1.4 }}>
+                        {notif.from_name} has expressed interest in you.
+                      </p>
+                      <p style={{ margin: 0, fontSize: 12, color: '#9aa0ac', fontWeight: 300, lineHeight: 1.55 }}>
+                        When you feel ready, you may visit {pronoun} profile.
+                      </p>
+                      {notifications.length > 1 && (
+                        <p style={{ margin: '6px 0 0', fontSize: 10.5, color: 'rgba(212,168,83,.55)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em' }}>
+                          +{notifications.length - 1} more
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => dismissNotification(notif.id)}
+                      aria-label="Dismiss"
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: '#5f6675', fontSize: 22, lineHeight: 1,
+                        padding: '0 0 0 4px', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.color = '#EDE7DA')}
+                      onMouseLeave={e => (e.currentTarget.style.color = '#5f6675')}
+                    >×</button>
+                  </motion.div>
+                );
+              })()}
+            </AnimatePresence>
 
             {loading ? (
               <LoadingSkeleton />

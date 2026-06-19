@@ -18,7 +18,10 @@
       "Bash(python reset_wali.py)",
       "Bash(ls -la \"d:\\\\Projects\\\\sakinah-handoff\\\\\" 2>/dev/null)",
       "Read(//d/Projects/sakinah-handoff\" 2>/dev/**)",
-      "PowerShell(Get-ChildItem \"d:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\\" -File | Where-Object {$_.Extension -eq \".py\"})"
+      "PowerShell(Get-ChildItem \"d:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\\" -File | Where-Object {$_.Extension -eq \".py\"})",
+      "Bash(grep -n \"maxWidth: 520\\\\|scrollable body\\\\|{\\\\/\\\\* ── Scrollable\" \"D:/Projects/sakinah-handoff/frontend/src/features/sakinah/pages/ConversationPage.tsx\")",
+      "Bash(grep -n \"Raya tone moderation\\\\|Raya intercept\\\\|</div>.*{\\\\/\\\\* end.*body\\\\|{\\\\/\\\\* ── Decision\\\\|{\\\\/\\\\* ── Journey\" \"D:/Projects/sakinah-handoff/frontend/src/features/sakinah/pages/ConversationPage.tsx\")",
+      "Bash(grep -n \"end.*footer\\\\|Footer.*end\\\\|^\\\\s*}\\\\s*$\\\\|Decision Page\\\\|journey.*complete\\\\|closingStep\" \"D:/Projects/sakinah-handoff/frontend/src/features/sakinah/pages/ConversationPage.tsx\")"
     ]
   }
 }

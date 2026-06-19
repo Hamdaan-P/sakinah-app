@@ -8,13 +8,13 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { collection, doc, getDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, deleteDoc, addDoc, updateDoc, serverTimestamp, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import type { Timestamp } from 'firebase/firestore';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import { useConversation } from '../hooks';
-import { sendMessage, inviteWali, fileSafetyReport, signalReady, getPendingWaliRequest, approveWaliRequest, searchWaliUser, sendWaliRequest } from '../services/sakinahService';
+import { sendMessage, checkTone, inviteWali, fileSafetyReport, signalReady, getPendingWaliRequest, approveWaliRequest, searchWaliUser, sendWaliRequest } from '../services/sakinahService';
 import { db, auth } from '@/config/firebase.config';
 import '../sakinah.css';
 
@@ -55,364 +55,63 @@ function getRayaOpeningText(name: string): string {
 const RAYA_OPENING_MESSAGE =
   "What did home feel like for you growing up? What made it feel safe — or is there anything you'd want to do differently?";
 
-type Msg = { from: 'me' | 'her' | 'raya'; text: string; createdAt?: string; msgType?: string; topicName?: string };
+type Msg = { from: 'me' | 'her' | 'raya'; text: string; createdAt?: string; msgType?: string; topicName?: string; fromUid?: string; senderName?: string };
 
-type ToneScenario = { triggers: string[]; responses: [string, string, string] };
+// ── Raya AI tone moderation ───────────────────────────────────────────────────
+// detectTone removed — detection is now server-side via Anthropic API.
+// See: POST /conversation/check-tone
 
-const TONE_SCENARIOS: ToneScenario[] = [
-  // A — Accusatory / Blaming
-  {
-    triggers: [
-      "you never", "you always", "you don't", "you dont", "you won't",
-      "you wont", "you refuse", "you never listen", "you ignore",
-      "you don't care", "you dont care", "you only think about",
-      "you never think about", "you make me feel", "its always you",
-      "it's always you", "typical of you", "you're so selfish",
-      "you are so selfish", "you're so rude", "you are so rude",
-      "you just dont", "you just don't", "why do you always",
-      "why do you never", "you never understand", "you misunderstand",
-      "you twist my words", "you blame me", "its your fault",
-      "it's your fault", "you caused this", "because of you",
-      "you ruined", "you destroyed", "you broke my trust",
-      "you hurt me", "you lied", "you deceived", "you manipulated",
-      "you gaslight", "you guilt trip", "why cant you",
-      "why can't you", "you never appreciate", "you take me for granted",
-      "you dismiss", "you belittle", "you embarrass me",
-      "you humiliate", "you disrespect", "you don't respect",
-      "you dont respect", "you look down on me", "you talk down to me",
-      "you make everything about you", "you never compromise",
-      "you never apologise", "you never apologize", "you expect too much",
-      "you're impossible", "you are impossible", "you're unreasonable",
-      "you are unreasonable", "you never change", "you're the problem",
-      "you are the problem", "everything is your fault",
-      "you started this", "you provoked me", "you pushed me",
-      "you tested me", "you drove me to this", "you make me crazy",
-      "you make me mad", "you make me angry", "you infuriate me",
-      "you frustrate me", "you disappoint me", "you let me down",
-      "you failed me", "you betrayed me", "you abandoned me",
-      "you left me", "you chose them over me", "you don't prioritise me",
-      "you dont prioritise me", "you don't value me", "you dont value me",
-      "you don't love me", "you dont love me", "you never loved me",
-      "you only care about yourself", "you're selfish", "you are selfish",
-      "you're heartless", "you are heartless", "you're cold",
-      "you are cold", "you don't feel anything", "you dont feel anything",
-    ],
-    responses: [
-      "It sounds like something important is on your heart 🤍 Sometimes 'I feel...' can open a door that 'You never...' might close. Raya is here with you.",
-      "Behind every accusation is usually a need that hasn't been heard yet 🌿 What is it that you're really longing for in this moment?",
-      "The heart speaks loudest when it's hurting 🤍 Try sharing how you feel rather than what they did — it's a gentler path to being understood.",
-    ],
-  },
-  // B — Frustrated / Commanding / Shutting Down
-  {
-    triggers: [
-      "stop talking", "stop it", "just stop", "stop messaging",
-      "stop texting", "i'm done", "im done", "i am done",
-      "forget this", "forget everything", "leave me alone",
-      "back off", "drop it", "drop the subject", "change the subject",
-      "i give up", "i've given up", "ive given up", "this is pointless",
-      "this is useless", "this is going nowhere", "there's no point",
-      "there is no point", "what's the point", "whats the point",
-      "you're wasting my time", "you are wasting my time",
-      "waste of time", "i cant do this", "i can't do this",
-      "this is too much", "i dont want to talk", "i don't want to talk",
-      "i need space", "give me space", "leave it", "just leave",
-      "go away", "i hate this", "this is exhausting", "you're exhausting",
-      "you exhaust me", "fed up", "i'm fed up", "im fed up",
-      "sick of this", "sick of you", "tired of this", "tired of you",
-      "i can't anymore", "i cant anymore", "not doing this",
-      "done with this", "done talking", "i'm leaving", "im leaving",
-      "i am leaving", "ending this", "shutting down", "closing this",
-      "i need to go", "i'm out", "im out", "i am out",
-      "stepping away", "taking a break", "need a break",
-      "can't handle this", "cant handle this", "too overwhelming",
-      "this overwhelms me", "my head hurts", "i can't think",
-      "i cant think", "i need to breathe", "let me breathe",
-      "i need to calm down", "i need to cool down", "i'm too angry",
-      "im too angry", "i am too angry", "speaking when angry",
-      "shouldn't speak right now", "not in the right headspace",
-      "not in the mood", "i'm not ready", "im not ready",
-    ],
-    responses: [
-      "It's okay to need a moment 🌿 There's no rush here — breathe, rest, and come back when your heart feels ready. Raya will be here.",
-      "Sometimes a conversation needs a gentle pause 🤍 Step away, drink some water, take a breath. What you're feeling is valid — and this space will still be here when you return.",
-      "Feeling overwhelmed is human 🌿 You don't have to have all the answers right now. Rest, reflect, and return when you're ready — with no pressure at all.",
-    ],
-  },
-  // C — Dismissive / Detached / Emotionally Withdrawing
-  {
-    triggers: [
-      "whatever", "i don't care", "i dont care", "doesn't matter",
-      "doesnt matter", "never mind", "nevermind", "forget it",
-      "it's fine", "its fine", "i'm fine", "im fine", "i am fine",
-      "sure whatever", "yeah yeah", "okay okay", "if you say so",
-      "as you wish", "do what you want", "think what you want",
-      "believe what you want", "suit yourself", "your loss",
-      "not my problem", "not my issue", "not interested",
-      "i don't care anymore", "i dont care anymore", "who cares",
-      "so what", "big deal", "not a big deal", "doesn't matter anyway",
-      "doesnt matter anyway", "nothing matters",
-      "meaningless", "irrelevant", "unimportant", "i stopped caring",
-      "gave up caring", "lost interest", "not worth it",
-      "don't bother", "dont bother", "save it", "spare me",
-      "i'm not listening", "im not listening", "not listening",
-      "going in one ear", "in one ear out the other",
-      "i've heard it all before", "ive heard it all before",
-      "same old story", "here we go again", "not this again",
-      "same thing again", "broken record", "you always say this",
-      "nothing new", "nothing changes", "why bother", "no point",
-      "forget about it", "just move on",
-      "drop it already", "let it drop", "i'm over it", "im over it",
-      "i am over it", "past caring", "beyond caring", "couldn't care less",
-      "could care less", "indifferent", "detached",
-      "emotionally unavailable", "i feel nothing", "numb",
-      "i've shut down", "ive shut down", "closed off", "walled off",
-      "don't want to feel", "dont want to feel", "stop feeling",
-      "feelings are pointless", "emotions are pointless",
-    ],
-    responses: [
-      "Sometimes the things we brush aside matter most 🤍 Raya noticed — there's no rush, but your feelings deserve to be heard too.",
-      "It's okay if words feel hard right now 🌿 Even sitting in silence together is a kind of closeness. You don't have to pretend everything is fine.",
-      "Pulling away is sometimes how we protect ourselves 🤍 But you don't have to protect yourself here. This is a safe, gentle space.",
-    ],
-  },
-  // D — Hurtful / Insulting / Personal Attacks
-  {
-    triggers: [
-      "idiot", "stupid", "dumb", "fool", "foolish", "moron", "loser",
-      "pathetic", "disgusting", "gross", "ugly", "worthless",
-      "useless", "hopeless", "clueless", "brainless", "mindless",
-      "childish", "immature", "grow up", "act your age",
-      "you're a child", "you are a child", "such a baby", "crybaby",
-      "drama queen", "drama king", "so dramatic", "overreacting",
-      "you're crazy", "you are crazy", "you're insane", "you are insane",
-      "you're mad", "you are mad", "psycho", "unhinged",
-      "unstable", "toxic", "poison", "you're toxic", "you are toxic",
-      "you're poisonous", "narcissist", "manipulator", "liar", "cheat",
-      "cheater", "fraud", "fake", "phony", "hypocrite", "two-faced",
-      "backstabber", "traitor", "coward", "spineless",
-      "heartless", "soulless", "cold-hearted", "stone cold",
-      "you have no heart", "you don't have a heart",
-      "you dont have a heart", "monster", "evil", "wicked",
-      "selfish pig", "self-centred", "self-centered", "narcissistic",
-      "arrogant", "conceited", "full of yourself", "think you're better",
-      "think you are better", "high and mighty", "holier than thou",
-      "self-righteous", "judgemental", "judgmental", "always judging",
-      "condescending", "patronising", "patronizing", "talking down",
-      "treating me like a child", "treating me like an idiot",
-    ],
-    responses: [
-      "Words carry weight long after they're sent 🌿 Raya gently invites you to pause before continuing — what you say here becomes part of this story.",
-      "Even in hard moments, kindness is always a choice 🤍 Take a breath — you can express how you feel without it becoming something you might regret.",
-      "This conversation matters — and so do both of you 🌿 Raya asks that you speak to each other the way you would want to be spoken to.",
-    ],
-  },
-  // E — Threatening / Ultimatum Language
-  {
-    triggers: [
-      "or else", "last warning", "final warning", "last chance",
-      "final chance", "this is your last", "don't make me",
-      "you'll regret", "you will regret", "i'm warning you",
-      "im warning you", "i am warning you", "watch yourself",
-      "you better", "you'd better", "you had better",
-      "don't push me", "dont push me", "don't test me", "dont test me",
-      "don't try me", "dont try me", "you're pushing my buttons",
-      "you are pushing my buttons", "you're testing my patience",
-      "you are testing my patience", "my patience is running out",
-      "i'm losing my patience", "im losing my patience",
-      "i am losing my patience",
-      "if you don't", "if you dont", "if you won't", "if you wont",
-      "if you refuse", "then we're done", "then we are done",
-      "then it's over", "then it is over", "i'll end this", "ill end this",
-      "i will end this", "i'll leave", "ill leave", "i will leave",
-      "don't say i didn't warn you", "dont say i didnt warn you",
-      "you'll face consequences", "actions have consequences",
-      "you'll see", "youll see", "mark my words",
-      "remember this moment", "you'll remember this", "youll remember this",
-    ],
-    responses: [
-      "Ultimatums can close doors that were meant to stay open 🌿 Raya gently asks — what are you really hoping for in this moment?",
-      "When we're hurting, we sometimes reach for control 🤍 But this space is about understanding, not pressure. What do you truly need right now?",
-      "Pressure rarely brings the connection we're seeking 🌿 Take a gentle breath — there's a softer way to say what's in your heart.",
-    ],
-  },
-];
-
-const SCENARIO_IDS = ['accusatory', 'frustrated', 'dismissive', 'hurtful', 'threatening'] as const;
+const SCENARIO_IDS = ['intimacy', 'rude'] as const;
 type ScenarioId = typeof SCENARIO_IDS[number];
 
-function detectTone(text: string, recentMessages?: Msg[]): { response: string; scenarioId: ScenarioId } | null {
-  const lower = text.toLowerCase();
-  const pick  = (s: ToneScenario) => s.responses[Math.floor(Math.random() * 3)];
+const INTIMACY_MESSAGE =
+  "Sakinah is a space built on haya (modesty). Conversations about physical intimacy are reserved for after Nikah — this boundary protects the sanctity of what you are building together.";
 
-  // ── Priority 1: E — Threatening ───────────────────────────────────────────
-  const E = TONE_SCENARIOS[4];
-  if (E.triggers.some(t => lower.includes(t)))
-    return { response: pick(E), scenarioId: 'threatening' };
-
-  // ── Priority 2: D — Insulting/Hurtful ─────────────────────────────────────
-  const D = TONE_SCENARIOS[3];
-
-  // Layer 5 — Religious/cultural insults (special Raya response)
-  const RELIGIOUS_INSULTS = [
-    "kafir", "munafiq", "shaitan", "devil", "evil person",
-    "going to hell", "hellfire", "cursed", "damned",
-    "allah will punish", "god will punish", "you will suffer",
-    "you deserve punishment", "bad muslim", "not a real muslim",
-    "fake muslim", "you don't deserve", "unworthy",
-  ];
-  if (RELIGIOUS_INSULTS.some(w => lower.includes(w)))
-    return {
-      response: "Our faith calls us to speak with dignity and kindness, even in our most difficult moments 🤍 Raya gently asks you to find words that reflect the best of who you are.",
-      scenarioId: 'hurtful',
-    };
-
-  // Layer 1 — Question attacks
-  const QUESTION_ATTACKS = [
-    "how dare", "who do you think", "what is wrong with you",
-    "whats wrong with you", "are you serious", "are you kidding",
-    "are you joking", "do you even", "do you have any idea",
-    "have you lost", "have you gone", "did you really",
-    "why would you", "why did you", "how could you",
-    "how can you", "what were you thinking", "what are you thinking",
-    "what do you think you", "who gave you", "what gives you",
-  ];
-  if (QUESTION_ATTACKS.some(q => lower.includes(q)))
-    return { response: pick(D), scenarioId: 'hurtful' };
-
-  // Layer 2 — Intensity words combined with "you"
-  const INTENSITY_WORDS = [
-    "stupid", "dumb", "idiot", "fool", "moron", "loser",
-    "pathetic", "disgusting", "horrible", "terrible",
-    "awful", "useless", "worthless", "hopeless", "clueless",
-    "nuts", "mad", "crazy", "insane", "psycho", "mental",
-    "ridiculous", "absurd", "unbelievable", "unacceptable",
-    "disgraceful", "shameful", "embarrassing", "selfish",
-    "heartless", "cruel", "mean", "nasty",
-    "rude", "disrespectful", "arrogant", "immature",
-    "childish", "toxic", "manipulative", "controlling",
-    "impossible", "unbearable", "insufferable", "intolerable",
-  ];
-  if (lower.includes("you") && INTENSITY_WORDS.some(w => lower.includes(w)))
-    return { response: pick(D), scenarioId: 'hurtful' };
-
-  // Layer 3 — Standalone harsh words (intercept regardless of sentence structure)
-  const STANDALONE_HARSH = [
-    "idiot", "stupid", "dumb", "moron", "loser", "pathetic",
-    "disgusting", "worthless", "useless", "hopeless",
-    "psycho", "lunatic", "nutcase", "freak", "creep",
-    "jerk", "coward", "liar", "cheat", "fraud", "fake",
-    "hypocrite", "narcissist", "manipulator", "abuser",
-    "shameless", "disgraceful", "despicable", "vile",
-    "wicked", "evil", "monster", "horrible person",
-    "terrible person", "bad person", "worst person",
-  ];
-  if (STANDALONE_HARSH.some(w => lower.includes(w)))
-    return { response: pick(D), scenarioId: 'hurtful' };
-
-  // Existing Scenario D triggers
-  if (D.triggers.some(t => lower.includes(t)))
-    return { response: pick(D), scenarioId: 'hurtful' };
-
-  // ── Priority 3: A — Accusatory ────────────────────────────────────────────
-  const A = TONE_SCENARIOS[0];
-  if (A.triggers.some(t => lower.includes(t)))
-    return { response: pick(A), scenarioId: 'accusatory' };
-
-  // ── Priority 4: B — Frustrated ────────────────────────────────────────────
-  const B = TONE_SCENARIOS[1];
-  if (B.triggers.some(t => lower.includes(t)))
-    return { response: pick(B), scenarioId: 'frustrated' };
-
-  // ── Priority 5: C — Dismissive ────────────────────────────────────────────
-  const C = TONE_SCENARIOS[2];
-
-  // Layer 4 — Short responses that turn sarcastic/dismissive in a tense conversation
-  const SHORT_SARCASTIC = [
-    "whatever", "fine", "ok", "okay", "sure", "yeah yeah",
-    "if you say so", "as you wish", "great", "fantastic",
-    "wonderful", "perfect",
-  ];
-  const isShortMessage = text.trim().split(/\s+/).length < 6;
-  if (isShortMessage && SHORT_SARCASTIC.some(w => lower.includes(w))) {
-    const hasNegativeContext = recentMessages?.slice(-5).some(m =>
-      m.from !== 'raya' && (
-        A.triggers.some(t => m.text.toLowerCase().includes(t)) ||
-        B.triggers.some(t => m.text.toLowerCase().includes(t)) ||
-        D.triggers.some(t => m.text.toLowerCase().includes(t))
-      )
-    );
-    if (hasNegativeContext)
-      return { response: pick(C), scenarioId: 'dismissive' };
-  }
-
-  // Existing Scenario C triggers
-  if (C.triggers.some(t => lower.includes(t)))
-    return { response: pick(C), scenarioId: 'dismissive' };
-
-  return null;
+const RUDENESS_MESSAGE =
+  "This space calls for patience and adab (good manners). Raya gently reminds you that how you speak reflects who you are — would you like to rephrase this with more dignity?";function getRephrasedMessage(original: string, _scenarioId: ScenarioId): string {
+  const t = original.toLowerCase();
+  if (t.includes('stupid') || t.includes('idiot') || t.includes('fool') || t.includes('dumb'))
+    return "I'm finding this moment really frustrating, and I'd like to express that without words I might regret 🌿";
+  if (t.includes('manners') || t.includes('badtameez') || t.includes('adab') || t.includes('rude') || t.includes('disrespect'))
+    return "I felt something in this exchange that unsettled me — can we speak to each other with more care? 🤍";
+  if (t.includes('who do you think') || t.includes('how dare') || t.includes('what do you think'))
+    return "Something about this moment has made me feel disrespected — I'd love for us to talk about it calmly 🌿";
+  return "I'd like to share how I feel — can we try approaching this with a little more gentleness? 🤍";
 }
 
-function getRephrasedMessage(original: string, scenarioId: ScenarioId): string {
-  const t = original.toLowerCase();
-  switch (scenarioId) {
-    case 'accusatory':
-      if (t.includes('understand'))
-        return "I sometimes feel like I'm not being fully heard, and that's hard for me 🤍";
-      if (t.includes('listen'))
-        return "I long to feel truly listened to — it matters deeply to me 🤍";
-      if (t.includes('care'))
-        return "I've been feeling unseen lately, and I just need to know that I matter to you 🤍";
-      if (t.includes('always') || t.includes('never'))
-        return "I notice a pattern that's been weighing on me, and I'd love for us to talk about it gently 🌿";
-      if (t.includes('fault') || t.includes('caused') || t.includes('ruined'))
-        return "I'm hurting right now and I need us to understand each other, not assign blame 🤍";
-      if (t.includes('lied') || t.includes('deceived') || t.includes('manipulated'))
-        return "Something happened that shook my trust, and I'd really like to talk about it honestly and calmly 🌿";
-      return "I have something important on my heart — can we talk about it with gentleness? 🤍";
+const SHORT_MSG_RISK_WORDS = [
+  'hot', 'sexy', 'cute', 'gorgeous', 'handsome', 'beautiful', 'stunning',
+  'stupid', 'idiot', 'fool', 'pagal', 'badtameez', 'jahil', 'ghadhaa',
+];
 
-    case 'frustrated':
-      if (t.includes('stop'))
-        return "I need a little space right now to gather my thoughts — can we pause and return to this gently? 🌿";
-      if (t.includes('give up') || t.includes('pointless') || t.includes('useless'))
-        return "I'm feeling overwhelmed right now. I haven't given up on this — I just need a moment to breathe 🤍";
-      if (t.includes('done') || t.includes('finished') || t.includes('over'))
-        return "I need a short break to calm my heart. This conversation matters to me — can we return to it when we're both at peace? 🌿";
-      if (t.includes('space') || t.includes('alone'))
-        return "I need a little time to myself right now. It's not about distance — it's about coming back to you with a clearer heart 🤍";
-      return "I'm finding this moment difficult. Can we take a gentle pause and return to this together? 🌿";
+const TONE_RISK_SIGNALS = [
+  'hot', 'sexy', 'cute', 'babe', 'baby', 'hottie', 'gorgeous', 'handsome',
+  'beautiful', 'stunning', 'stupid', 'idiot', 'fool', 'dumb', 'moron',
+  'pagal', 'badtameez', 'jahil', 'ghadhaa', 'be-adab', 'rude', 'manners', 'language',
+];
 
-    case 'dismissive':
-      if (t.includes('whatever'))
-        return "I think I'm finding it hard to engage right now — can I have a moment? 🤍";
-      if (t.includes("don't care") || t.includes('dont care'))
-        return "Maybe I'm more affected by this than I'm letting on. Give me a little time 🌿";
-      if (t.includes("doesn't matter") || t.includes('doesnt matter'))
-        return "It does matter — I'm just struggling to find the words for why right now 🤍";
-      if (t.includes('fine') || t.includes('okay'))
-        return "I'm still processing how I feel — I'll share more when I find the right words 🌿";
-      return "I'm quieter than usual right now, but I'm still here with you 🤍";
+const AGGRESSIVE_QUESTION_PATTERNS = ["don't you", 'how dare', "what's wrong"];
 
-    case 'hurtful':
-      if (t.includes('immature') || t.includes('childish') || t.includes('grow up'))
-        return "I feel hurt when our conversations go in this direction — can we find a calmer way to talk about this? 🌿";
-      if (t.includes('selfish') || t.includes('self-centred') || t.includes('self-centered'))
-        return "I've been feeling like my needs aren't being considered, and that's been painful for me 🤍";
-      if (t.includes('stupid') || t.includes('idiot') || t.includes('dumb') || t.includes('fool'))
-        return "I'm frustrated right now, but I don't want frustration to lead my words — can we slow down together? 🌿";
-      if (t.includes('toxic') || t.includes('crazy') || t.includes('insane'))
-        return "Something between us feels broken right now and I want to fix it, not worsen it 🤍";
-      return "I'm feeling hurt and I want to express that without causing more hurt — can we try again gently? 🌿";
+const SAFE_RESPONSE_PHRASES = new Set([
+  'yes', 'no', 'okay', 'ok', 'alright', 'sure', 'thanks', 'thank you',
+  'good', 'fine', 'great', 'alhamdulillah', 'mashallah', 'inshallah',
+  'jazakallah', 'salam', 'assalam', 'walaikum', 'how are you',
+  'i am fine', 'i am good',
+]);
 
-    case 'threatening':
-      if (t.includes('warning') || t.includes('last chance'))
-        return "I'm feeling unheard and I'm scared about where this is heading — can we slow down and talk about what's really going on? 🌿";
-      if (t.includes('regret') || t.includes('remember this'))
-        return "I'm hurting right now and I want us to find a better way through this together 🤍";
-      if (t.includes('leave') || t.includes('done') || t.includes('over'))
-        return "Something in me is scared right now. Before anything else — can we just talk, calmly and honestly? 🌿";
-      return "I'm carrying a lot right now. What I really need is to feel heard, not to push you away 🤍";
-  }
+function requiresToneCheck(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  const words = lower.split(/\s+/);
+  if (SAFE_RESPONSE_PHRASES.has(lower)) return false;
+  if (words.length <= 3 && !SHORT_MSG_RISK_WORDS.some(w => lower.includes(w))) return false;
+  return (
+    words.length > 3 &&
+    (
+      text.includes('!') ||
+      AGGRESSIVE_QUESTION_PATTERNS.some(p => lower.includes(p)) ||
+      TONE_RISK_SIGNALS.some(w => lower.includes(w))
+    )
+  );
 }
 
 type TopicState = 'open' | 'now' | 'locked';
@@ -443,11 +142,15 @@ function RayaOrb({ size = 32 }: { size?: number }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function ConversationPage() {
   const navigate = useNavigate();
-  const { matchId } = useParams<{ matchId: string }>();
+  const { matchId: pathMatchId } = useParams<{ matchId: string }>();
+  const [searchParams] = useSearchParams();
+  const matchId = pathMatchId ?? searchParams.get('matchId') ?? undefined;
   const { conversation } = useConversation(matchId ?? '');
   const matchName = conversation?.match_name ?? 'Your match';
 
   const [userRole, setUserRole]                   = useState<string | null>(null);
+  const [roleLoaded, setRoleLoaded]               = useState(false);
+  const [userGender, setUserGender]               = useState<string | null>(null);
   const [waliPresent, setWaliPresent]             = useState(false);
   const [waliName, setWaliName]                   = useState('');
   const [waliConfirmation, setWaliConfirmation]   = useState(false);
@@ -462,11 +165,22 @@ export function ConversationPage() {
   const [waliInviting, setWaliInviting]           = useState(false);
   const [waliSuccessMsg, setWaliSuccessMsg]       = useState('');
   const [nudgeDismissed, setNudgeDismissed]       = useState(false);
+  const [keepGoingClicked, setKeepGoingClicked]     = useState(false);
+  const [convNotifications, setConvNotifications]   = useState<any[]>([]);
+  const [linkedWaliUid, setLinkedWaliUid]           = useState<string | null>(null);
+  const [waliObserveInviteSent, setWaliObserveInviteSent] = useState(false);
+  const [waliObserveMsg, setWaliObserveMsg]         = useState<string | null>(null);
+  const [waliObserveSearchOpen, setWaliObserveSearchOpen]     = useState(false);
+  const [waliObserveSearchQuery, setWaliObserveSearchQuery]   = useState('');
+  const [waliObserveSearchResults, setWaliObserveSearchResults] = useState<Array<{ wali_uid: string; wali_name: string }>>([]);
+  const [waliObserveSearching, setWaliObserveSearching]       = useState(false);
   const [rayaCardDismissed, setRayaCardDismissed] = useState(false);
   const [messageInput, setMessageInput]           = useState('');
   const [rayaIntervention, setRayaIntervention]   = useState<string | null>(null);
   const [rephraseText, setRephraseText]           = useState<string | null>(null);
+  const [rayaThinking, setRayaThinking]           = useState(false);
   const [messages, setMessages]                   = useState<Msg[]>([]);
+  const [participantNames, setParticipantNames]   = useState<Record<string, string>>({});
   const [reportOpen, setReportOpen]               = useState(false);
   const [reportReason, setReportReason]           = useState('Inappropriate behaviour');
   const [reportSubmitted, setReportSubmitted]     = useState(false);
@@ -478,10 +192,10 @@ export function ConversationPage() {
 
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
   const messagesEnd    = useRef<HTMLDivElement>(null);
-  const waliSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const toneGraceRef        = useRef(false);
+  const waliSearchDebounceRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const waliObserveDebounceRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSendRef      = useRef('');
-  const pendingScenarioRef  = useRef<ScenarioId>('accusatory');
+  const pendingScenarioRef  = useRef<ScenarioId>('rude');
 
   // Fetch current user's role from Firestore on mount.
   useEffect(() => {
@@ -491,8 +205,14 @@ export function ConversationPage() {
       if (snap.exists()) {
         const data = snap.data();
         setUserRole(data.role || data.sakinah_role || null);
+        setUserGender(data.gender || null);
+        setLinkedWaliUid(data.wali_uid || null);
       }
-    }).catch(console.error);
+      setRoleLoaded(true);
+    }).catch((e) => {
+      console.error(e);
+      setRoleLoaded(true);
+    });
   }, []);
 
   // Real-time message listener.
@@ -513,6 +233,8 @@ export function ConversationPage() {
         createdAt: ts?.toDate?.()?.toISOString(),
         msgType: docData.message_type as string | undefined,
         topicName: docData.topic_name as string | undefined,
+        fromUid,
+        senderName: (docData.senderName ?? docData.displayName ?? undefined) as string | undefined,
       };
     };
 
@@ -561,6 +283,28 @@ export function ConversationPage() {
 
     return () => { unsub(); fallbackUnsub?.(); };
   }, [matchId]);
+
+  // Wali observer: load participant display names from match + profiles.
+  useEffect(() => {
+    if (userRole !== 'wali' || !matchId) return;
+    (async () => {
+      try {
+        const matchSnap = await getDoc(doc(db, 'sakinah_matches', matchId));
+        if (!matchSnap.exists()) return;
+        const { user_a_uid, user_b_uid } = matchSnap.data() as { user_a_uid: string; user_b_uid: string };
+        const [profA, profB] = await Promise.all([
+          getDoc(doc(db, 'sakinah_profiles', user_a_uid)),
+          getDoc(doc(db, 'sakinah_profiles', user_b_uid)),
+        ]);
+        const names: Record<string, string> = {};
+        if (profA.exists()) names[user_a_uid] = (profA.data().display_name as string) || user_a_uid;
+        if (profB.exists()) names[user_b_uid] = (profB.data().display_name as string) || user_b_uid;
+        setParticipantNames(names);
+      } catch (e) {
+        console.error('[Wali] Failed to load participant names:', e);
+      }
+    })();
+  }, [userRole, matchId]);
 
   // Match doc listener — tracks ready states and live matchflow step.
   useEffect(() => {
@@ -611,6 +355,64 @@ export function ConversationPage() {
   // isLastTopic: topic 8 (Finances) — "ready to go deeper" becomes "complete our journey".
   const isLastTopic = activeTopicIdx >= TOPICS.length - 1;
 
+  // Reset keep-going state whenever the backend resets myReady (new topic started).
+  useEffect(() => {
+    if (!myReady) setKeepGoingClicked(false);
+  }, [myReady]);
+
+  // On load, check if this female seeker already sent a wali observe invite for
+  // this match — restores "Wali invited ✓" state across page refreshes.
+  useEffect(() => {
+    if (userGender !== 'female' || !matchId) return;
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    getDocs(query(
+      collection(db, 'sakinah_notifications'),
+      where('from_uid', '==', uid),
+      where('match_id', '==', matchId),
+      where('type', '==', 'wali_conversation_invite'),
+    ))
+      .then(snap => { if (!snap.empty) setWaliObserveInviteSent(true); })
+      .catch(console.error);
+  }, [userGender, matchId]);
+
+  // Load conversation-scoped notifications (match_id present, not interest_expressed).
+  // Kept separate from ConsideredFew's interest_expressed notifications.
+  useEffect(() => {
+    if (!matchId) return;
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    getDocs(query(
+      collection(db, 'sakinah_notifications'),
+      where('to_uid', '==', uid),
+      where('match_id', '==', matchId),
+    ))
+      .then(snap => {
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setConvNotifications(docs);
+      })
+      .catch(console.error);
+  }, [matchId]);
+
+  // When a new topic opens, delete stale conversation notifications from Firestore
+  // and immediately clear local state so the UI updates without a page refresh.
+  // interest_expressed notifications (no match_id) in ConsideredFewPage are untouched.
+  useEffect(() => {
+    if (liveMatchflowStep === null || !matchId) return;
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    getDocs(query(
+      collection(db, 'sakinah_notifications'),
+      where('to_uid', '==', uid),
+      where('match_id', '==', matchId),
+    ))
+      .then(snap => {
+        snap.docs.forEach(d => deleteDoc(d.ref).catch(console.error));
+        setConvNotifications([]);
+      })
+      .catch(console.error);
+  }, [liveMatchflowStep, matchId]);
+
   // Closing sequence — fires when both users have signalled ready on the final topic.
   // Both Raya messages and the "Enter The Decision" button appear with timed delays.
   useEffect(() => {
@@ -631,28 +433,35 @@ export function ConversationPage() {
 
   const handleSend = async () => {
     const text = messageInput.trim();
-    if (!text) return;
+    if (!text || rayaThinking) return;
 
-    setMessageInput('');
+    pendingSendRef.current = text;
 
-    // Pre-send tone check
-    if (!toneGraceRef.current) {
-      const result = detectTone(text, messages);
-      if (result) {
-        pendingSendRef.current = text;
-        setRayaIntervention(result.response);
-        pendingScenarioRef.current = result.scenarioId;
-        toneGraceRef.current = true;
+    if (!requiresToneCheck(text)) {
+      setMessageInput('');
+      if (matchId) await sendMessage(matchId, text);
+      return;
+    }
+
+    setRayaThinking(true);
+
+    try {
+      const check = await checkTone(text);
+      setRayaThinking(false);
+      if (check.violation) {
+        pendingScenarioRef.current = check.type as ScenarioId;
+        setRayaIntervention(
+          check.type === 'intimacy' ? INTIMACY_MESSAGE : RUDENESS_MESSAGE
+        );
         return;
       }
-    } else {
-      toneGraceRef.current = false;
+    } catch (e) {
+      console.error('send error', e);
+      setRayaThinking(false);
     }
 
-    // Only reaches here if no tone match
-    if (matchId) {
-      await sendMessage(matchId, text);
-    }
+    setMessageInput('');
+    if (matchId) await sendMessage(matchId, text);
   };
 
   const searchWali = async (name: string) => {
@@ -683,6 +492,69 @@ export function ConversationPage() {
     } finally {
       setWaliInviting(false);
     }
+  };
+
+  const sendObserveInvite = async (waliUid: string) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || !matchId) return;
+    const displayName = auth.currentUser?.displayName || matchName;
+    try {
+      const existing = await getDocs(query(
+        collection(db, 'sakinah_notifications'),
+        where('to_uid', '==', waliUid),
+        where('from_uid', '==', uid),
+        where('type', '==', 'wali_conversation_invite'),
+      ));
+      if (!existing.empty) {
+        setWaliObserveInviteSent(true);
+        setWaliObserveSearchOpen(false);
+        setWaliObserveSearchQuery('');
+        setWaliObserveSearchResults([]);
+        setWaliObserveMsg(null);
+        return;
+      }
+      await addDoc(collection(db, 'sakinah_notifications'), {
+        to_uid: waliUid,
+        from_uid: uid,
+        from_name: displayName,
+        match_id: matchId,
+        type: 'wali_conversation_invite',
+        message: `${displayName} has invited you to observe their conversation.`,
+        created_at: serverTimestamp(),
+        read: false,
+      });
+      setWaliObserveInviteSent(true);
+      setWaliObserveSearchOpen(false);
+      setWaliObserveSearchQuery('');
+      setWaliObserveSearchResults([]);
+      setWaliObserveMsg(null);
+    } catch (e: any) {
+      console.error('Failed to send wali observe invite — full error:', e, 'code:', e?.code, 'message:', e?.message);
+      setWaliObserveMsg('Failed to send invite. Please try again.');
+    }
+  };
+
+  const handleObserveWaliSelect = async (waliUid: string) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    try {
+      await updateDoc(doc(db, 'users', uid), { wali_uid: waliUid });
+      setLinkedWaliUid(waliUid);
+    } catch (e) {
+      console.error('Failed to save wali_uid:', e);
+    }
+    await sendObserveInvite(waliUid);
+  };
+
+  const handleInviteWaliToObserve = async () => {
+    if (!matchId || waliObserveInviteSent) return;
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    if (!linkedWaliUid) {
+      setWaliObserveSearchOpen(prev => !prev);
+      return;
+    }
+    await sendObserveInvite(linkedWaliUid);
   };
 
   // Separate human messages from Raya system messages for all logic below.
@@ -760,6 +632,8 @@ export function ConversationPage() {
   // Both users must signal on the last topic to enter the closing sequence.
   const journeyComplete = isLastTopic && myReady && partnerReady;
   const showReadyButton = enoughExchanged && !myReady;
+  // null = role not yet loaded; true = wali observer; false = seeker/no-role
+  const isWali: boolean | null = roleLoaded ? userRole === 'wali' : null;
 
   console.log('[ReadyButton]', {
     currentTopicName,
@@ -834,7 +708,9 @@ export function ConversationPage() {
                   letterSpacing: '0.02em',
                 }}
               >
-                Phase 6 · with {matchName} · guided by Raya
+                {isWali === true
+                  ? 'Observing conversation · guided by Raya'
+                  : `Phase 6 · with ${matchName} · guided by Raya`}
               </div>
             </div>
             <button
@@ -852,7 +728,7 @@ export function ConversationPage() {
         </div>
 
         {/* ── Pending Wali Request banner ────────────────────────────────── */}
-        {userRole === 'seeker' && <AnimatePresence>
+        {isWali === false && <AnimatePresence>
           {pendingWaliReq && !waliReqDismissed && !waliReqApproved && (
             <motion.div
               key="wali-req-banner"
@@ -957,129 +833,80 @@ export function ConversationPage() {
         >
           <div style={{ maxWidth: 520, width: '100%' }}>
 
-            {/* ── Wali toggle ──────────────────────────────────────────── */}
-            {userRole === 'seeker' && <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.04 }}
-              style={{ textAlign: 'center', marginBottom: 18 }}
-            >
-              <button
-                onClick={() => { if (!waliPresent) setWaliSearchOpen(true); }}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #C9A84C',
-                  borderRadius: '999px',
-                  color: '#C9A84C',
-                  padding: '6px 16px',
-                  fontSize: '13px',
-                  cursor: waliPresent ? 'default' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                {waliPresent ? '🕌 Wali present' : '🕌 Invite your wali'}
-              </button>
+            {/* Wali observer banner */}
+            {isWali === true && (
+              <div style={{
+                textAlign: 'center', padding: '8px 16px', marginBottom: 12,
+                borderRadius: 10,
+                background: 'rgba(212,168,83,.06)',
+                border: '1px solid rgba(212,168,83,.18)',
+                fontFamily: "'Manrope', sans-serif",
+                fontSize: 11, color: 'rgba(212,168,83,.65)',
+                letterSpacing: '0.02em',
+              }}>
+                You are observing this conversation as a trusted guardian
+              </div>
+            )}
 
-              {waliSuccessMsg && (
-                <p style={{ color: '#C9A84C', fontSize: '13px', marginTop: '8px', textAlign: 'center' }}>
-                  ✓ {waliSuccessMsg}
-                </p>
-              )}
+            {/* Loading state while role is being fetched */}
+            {isWali === null && (
+              <div style={{
+                textAlign: 'center', padding: '32px 0',
+                color: '#5f6675', fontFamily: "'Manrope', sans-serif", fontSize: 12,
+                letterSpacing: '0.04em',
+              }}>
+                Loading…
+              </div>
+            )}
 
-              {waliSearchOpen && (
-                <div style={{
-                  background: '#1a1a1a',
-                  border: '1px solid #C9A84C',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  marginTop: '8px',
-                  width: '100%',
-                  maxWidth: '400px',
-                }}>
-                  <p style={{ color: '#C9A84C', fontSize: '14px', marginBottom: '4px', fontWeight: 600 }}>
-                    Find your guardian
-                  </p>
-                  <p style={{ color: '#888', fontSize: '12px', marginBottom: '12px' }}>
-                    Enter their name to invite them
-                  </p>
-                  <input
-                    type="text"
-                    placeholder="e.g. Hassan"
-                    value={waliSearchQuery}
-                    onChange={(e) => {
-                      setWaliSearchQuery(e.target.value);
-                      if (waliSearchDebounceRef.current) clearTimeout(waliSearchDebounceRef.current);
-                      waliSearchDebounceRef.current = setTimeout(() => searchWali(e.target.value), 500);
-                    }}
-                    style={{
-                      width: '100%',
-                      background: '#111',
-                      border: '1px solid #333',
-                      borderRadius: '8px',
-                      padding: '10px 12px',
-                      color: '#fff',
-                      fontSize: '14px',
-                      marginBottom: '12px',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                  {waliSearching && (
-                    <p style={{ color: '#888', fontSize: '13px' }}>Searching...</p>
-                  )}
-                  {waliSearchResults.map((result) => (
-                    <div key={result.wali_uid} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '10px 12px',
-                      background: '#111',
-                      borderRadius: '8px',
-                      marginBottom: '8px',
-                    }}>
-                      <span style={{ color: '#fff', fontSize: '14px' }}>{result.wali_name}</span>
-                      <button
-                        onClick={() => sendWaliInvite(result.wali_uid)}
-                        disabled={waliInviting}
-                        style={{
-                          background: '#C9A84C',
-                          color: '#000',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '6px 14px',
-                          fontSize: '13px',
-                          cursor: waliInviting ? 'not-allowed' : 'pointer',
-                          fontWeight: 600,
-                          opacity: waliInviting ? 0.7 : 1,
-                        }}
-                      >
-                        {waliInviting ? 'Sending...' : 'Invite'}
-                      </button>
-                    </div>
-                  ))}
-                  {!waliSearching && waliSearchQuery.length >= 2 && waliSearchResults.length === 0 && (
-                    <p style={{ color: '#888', fontSize: '13px' }}>No guardian found with that name</p>
-                  )}
+            {/* Floating pill — sticky top of chat area after "Keep going" is clicked */}
+            <AnimatePresence>
+              {keepGoingClicked && !myReady && isWali === false && (
+                <motion.div
+                  key="next-chapter-pill"
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ position: 'sticky', top: 8, zIndex: 10, textAlign: 'center', marginBottom: 12 }}
+                >
                   <button
-                    onClick={() => { setWaliSearchOpen(false); setWaliSearchQuery(''); setWaliSearchResults([]); }}
+                    disabled={readySending}
+                    onClick={async () => {
+                      if (!matchId || readySending) return;
+                      setReadySending(true);
+                      try {
+                        await signalReady(matchId);
+                      } finally {
+                        setReadySending(false);
+                      }
+                    }}
                     style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#888',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      marginTop: '8px',
+                      display: 'inline-flex', alignItems: 'center', gap: 7,
+                      padding: '8px 18px', borderRadius: 20,
+                      background: 'rgba(10,14,21,.82)', backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(212,168,83,.3)',
+                      color: '#e7c984',
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontStyle: 'italic', fontSize: 12.5,
+                      cursor: readySending ? 'default' : 'pointer',
+                      opacity: readySending ? 0.6 : 1,
+                      boxShadow: '0 4px 16px rgba(0,0,0,.4)',
+                      transition: '.2s',
+                      letterSpacing: '0.01em',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    Cancel
+                    Ready to explore the next chapter? →
                   </button>
-                </div>
+                </motion.div>
               )}
-            </motion.div>}
+            </AnimatePresence>
 
+
+            {/* ── Wali toggle ──────────────────────────────────────────── */}
             {/* ── Topic curriculum ──────────────────────────────────────── */}
-            <motion.div
+            {isWali !== true && <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.12 }}
@@ -1159,13 +986,13 @@ export function ConversationPage() {
                   </motion.div>
                 );
               })}
-            </motion.div>
+            </motion.div>}
 
             {/* ── Raya topic prompt card ────────────────────────────────
                 Visible only when this user needs to speak next.
                 Hidden once both have exchanged messages.
             ──────────────────────────────────────────────────────────── */}
-            <AnimatePresence>
+            {isWali !== true && <AnimatePresence>
               {showTopicPromptCard && (
                 <motion.div
                   key="topic-prompt"
@@ -1194,7 +1021,7 @@ export function ConversationPage() {
                   </p>
                 </motion.div>
               )}
-            </AnimatePresence>
+            </AnimatePresence>}
 
             {/* ── Message bubbles ─────────────────────────────────────── */}
             <motion.div
@@ -1205,12 +1032,19 @@ export function ConversationPage() {
             >
               {messages.map((msg, i) => {
                 if (msg.from === 'raya') {
-                  // Hide the ready_nudge that names the current user — they
-                  // already know they clicked ready; only the partner should see it.
                   if (msg.msgType === 'ready_nudge') {
+                    // Hide once the topic has already advanced — a topic_announcement
+                    // appearing later in the stream means both were ready and moved on.
+                    if (messages.slice(i + 1).some(m => m.msgType === 'topic_announcement')) return null;
+                    // Hide when both users are now ready (topic_announcement is imminent).
+                    if (partnerReady) return null;
+                    // Hide the nudge naming the current user — they already know they clicked ready.
                     const myName = auth.currentUser?.displayName ?? '';
                     if (myName && msg.text?.startsWith(myName)) return null;
                   }
+                  // Hide topic_announcements that belong to a previous topic — only the
+                  // announcement that opened the current topic is relevant to show.
+                  if (msg.msgType === 'topic_announcement' && msg.topicName !== currentTopicName) return null;
                   return (
                     <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0', gap: 6 }}>
                       <div
@@ -1233,19 +1067,6 @@ export function ConversationPage() {
                           {msg.text}
                         </span>
                       </div>
-                      <button
-                        onClick={() => { /* TODO: open scholar-counsellor support flow */ }}
-                        className="sk-scholar-hint"
-                        style={{
-                          background: 'none', border: 'none', padding: 0,
-                          fontFamily: "'Cormorant Garamond', serif",
-                          fontStyle: 'italic', fontSize: 11,
-                          color: 'rgba(212,168,83,.5)',
-                          cursor: 'pointer', letterSpacing: '0.02em',
-                        }}
-                      >
-                        🕌 Need deeper guidance? Speak with a scholar
-                      </button>
                     </div>
                   );
                 }
@@ -1277,7 +1098,9 @@ export function ConversationPage() {
                         marginBottom: 4, display: 'block',
                       }}
                     >
-                      {msg.from === 'me' ? 'You' : matchName}
+                      {isWali === true
+                        ? (participantNames[msg.fromUid ?? ''] ?? msg.senderName ?? msg.fromUid ?? '')
+                        : (msg.from === 'me' ? 'You' : matchName)}
                     </span>
                     {msg.text}
                   </div>
@@ -1380,7 +1203,8 @@ export function ConversationPage() {
         </div>
 
         {/* ── Footer: Raya card + input + tone mod + scholar link ────────── */}
-        <div
+        {/* Hidden entirely for wali observers and while role is loading */}
+        {isWali === false && <div
           style={{
             flexShrink: 0,
             borderTop: '1px solid rgba(255,255,255,.05)',
@@ -1468,7 +1292,7 @@ export function ConversationPage() {
 
             {/* Topic completion — ready to go deeper / complete our journey */}
             <AnimatePresence>
-              {(showReadyButton || (myReady && !journeyComplete)) && (
+              {((showReadyButton && !keepGoingClicked) || (myReady && !journeyComplete)) && isWali === false && (
                 <motion.div
                   key="ready-next"
                   initial={{ opacity: 0, y: 6 }}
@@ -1528,6 +1352,33 @@ export function ConversationPage() {
               )}
             </AnimatePresence>
 
+            {/* Keep going link — muted, between the ready button and the scholar divider */}
+            <AnimatePresence>
+              {showReadyButton && !keepGoingClicked && !isLastTopic && isWali === false && (
+                <motion.div
+                  key="keep-going"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ textAlign: 'center', marginBottom: 6 }}
+                >
+                  <button
+                    onClick={() => setKeepGoingClicked(true)}
+                    style={{
+                      background: 'none', border: 'none', padding: 0,
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontStyle: 'italic', fontSize: 11,
+                      color: 'rgba(212,168,83,.5)',
+                      cursor: 'pointer', letterSpacing: '0.02em',
+                    }}
+                  >
+                    Still have more to share? Keep going →
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* 24h nudge — only when last message from her is >24h old */}
             <AnimatePresence>
               {showNudge && (
@@ -1565,8 +1416,8 @@ export function ConversationPage() {
               )}
             </AnimatePresence>
 
-            {/* Scholar footer link — always visible above the input */}
-            <div style={{ textAlign: 'center', marginBottom: 9 }}>
+            {/* Scholar footer link — visible to seekers only */}
+            {isWali === false && <div style={{ textAlign: 'center', marginBottom: 9 }}>
               <button
                 onClick={() => { /* TODO: open scholar-counsellor support flow */ }}
                 className="sk-scholar-footer"
@@ -1583,10 +1434,110 @@ export function ConversationPage() {
                 🕌 Speak with a scholar
                 <span style={{ color: 'rgba(212,168,83,.22)', letterSpacing: '-0.02em' }}>———</span>
               </button>
-            </div>
+            </div>}
 
-            {/* Input row */}
-            <div
+            {/* Invite Wali to observe — female seekers only */}
+            {userGender === 'female' && isWali === false && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <button
+                    onClick={handleInviteWaliToObserve}
+                    disabled={waliObserveInviteSent}
+                    style={{
+                      background: 'none', border: 'none', padding: 0,
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontStyle: 'italic', fontSize: 11.5,
+                      color: waliObserveInviteSent
+                        ? 'rgba(127,176,122,.6)'
+                        : 'rgba(212,168,83,.45)',
+                      cursor: waliObserveInviteSent ? 'default' : 'pointer',
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    {waliObserveInviteSent ? 'Wali invited ✓' : 'Invite your Wali to observe 👁️'}
+                  </button>
+                </div>
+
+                {waliObserveSearchOpen && !waliObserveInviteSent && (
+                  <div style={{ marginTop: 8 }}>
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Type your Wali's name..."
+                      value={waliObserveSearchQuery}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setWaliObserveSearchQuery(v);
+                        if (waliObserveDebounceRef.current) clearTimeout(waliObserveDebounceRef.current);
+                        waliObserveDebounceRef.current = setTimeout(async () => {
+                          if (v.length < 2) { setWaliObserveSearchResults([]); return; }
+                          setWaliObserveSearching(true);
+                          try {
+                            const res: any = await searchWaliUser(v);
+                            setWaliObserveSearchResults(res.walis || []);
+                          } catch (err) {
+                            console.error(err);
+                          } finally {
+                            setWaliObserveSearching(false);
+                          }
+                        }, 400);
+                      }}
+                      style={{
+                        width: '100%',
+                        background: 'rgba(255,255,255,.04)',
+                        border: '1px solid rgba(212,168,83,.22)',
+                        borderRadius: 10,
+                        padding: '8px 12px',
+                        color: '#EDE7DA',
+                        fontFamily: "'Manrope', sans-serif",
+                        fontSize: 12,
+                        boxSizing: 'border-box' as const,
+                        outline: 'none',
+                      }}
+                    />
+                    {waliObserveSearching && (
+                      <p style={{
+                        fontSize: 10.5, color: '#5f6675', margin: '4px 0 0',
+                        fontFamily: "'Manrope', sans-serif",
+                      }}>
+                        Searching...
+                      </p>
+                    )}
+                    {waliObserveSearchResults.map(r => (
+                      <div
+                        key={r.wali_uid}
+                        onClick={() => handleObserveWaliSelect(r.wali_uid)}
+                        style={{
+                          padding: '8px 12px',
+                          marginTop: 4,
+                          borderRadius: 8,
+                          background: 'rgba(212,168,83,.06)',
+                          border: '1px solid rgba(212,168,83,.15)',
+                          color: '#EDE7DA',
+                          fontFamily: "'Manrope', sans-serif",
+                          fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {r.wali_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {waliObserveMsg && (
+                  <p style={{
+                    fontSize: 10.5, color: '#5f6675', margin: '4px 0 0', textAlign: 'center',
+                    fontFamily: "'Manrope', sans-serif", lineHeight: 1.4,
+                  }}>
+                    {waliObserveMsg}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Input row — hidden for wali observers */}
+            {isWali === false && <div
               style={{
                 display: 'flex', gap: 9,
                 alignItems: 'flex-end', marginBottom: 7,
@@ -1638,7 +1589,38 @@ export function ConversationPage() {
               >
                 ↑
               </button>
-            </div>
+            </div>}
+
+            {/* Raya is thinking indicator */}
+            <AnimatePresence>
+              {rayaThinking && (
+                <motion.div
+                  key="raya-thinking"
+                  initial={{ opacity: 0, y: 3 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 3 }}
+                  transition={{ duration: 0.2 }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '7px 14px', marginBottom: 7, borderRadius: 20,
+                    background: 'rgba(212,168,83,.03)',
+                    border: '1px solid rgba(212,168,83,.1)',
+                  }}
+                >
+                  <RayaOrb size={18} />
+                  <span
+                    style={{
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontStyle: 'italic', fontSize: 12,
+                      color: 'rgba(201,168,92,.5)', lineHeight: 1.5,
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    Raya is thinking…
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Raya tone moderation — intercepts before send */}
             <AnimatePresence>
@@ -1652,7 +1634,7 @@ export function ConversationPage() {
                   style={{ marginBottom: 7 }}
                 >
                   {rephraseText === null ? (
-                    /* ── Phase 1: tone warning + 3 choices ── */
+                    /* ── Phase 1: tone warning ── */
                     <>
                       <div
                         style={{
@@ -1679,71 +1661,138 @@ export function ConversationPage() {
                           marginTop: 5, paddingRight: 4, flexWrap: 'wrap',
                         }}
                       >
-                        <button
-                          onClick={async () => {
-                            const text = pendingSendRef.current;
-                            pendingSendRef.current = '';
-                            setRayaIntervention(null);
-                            setRephraseText(null);
-                            if (matchId && text) await sendMessage(matchId, text);
-                          }}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            fontSize: 11, color: 'rgba(212,168,83,.7)',
-                            fontFamily: "'Manrope', sans-serif", fontWeight: 400,
-                            padding: '3px 0', letterSpacing: '0.01em',
-                          }}
-                        >
-                          Send anyway
-                        </button>
-                        <button
-                          onClick={() => {
-                            const rephrased = getRephrasedMessage(
-                              pendingSendRef.current,
-                              pendingScenarioRef.current
-                            );
-                            setRephraseText(rephrased);
-                          }}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            fontSize: 11, color: 'rgba(212,168,83,.85)',
-                            fontFamily: "'Manrope', sans-serif", fontWeight: 400,
-                            padding: '3px 0', letterSpacing: '0.01em',
-                          }}
-                        >
-                          Raya, help me say this better 🤍
-                        </button>
-                        <button
-                          onClick={() => {
-                            pendingSendRef.current = '';
-                            setRayaIntervention(null);
-                            setRephraseText(null);
-                            setTimeout(() => textareaRef.current?.focus(), 50);
-                          }}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            fontSize: 11, color: 'rgba(237,231,218,.4)',
-                            fontFamily: "'Manrope', sans-serif", fontWeight: 400,
-                            padding: '3px 0', letterSpacing: '0.01em',
-                          }}
-                        >
-                          I'll rewrite it myself
-                        </button>
-                      </div>
-                      <div style={{ textAlign: 'center', marginTop: 8 }}>
-                        <button
-                          onClick={() => { /* TODO: open scholar-counsellor support flow */ }}
-                          className="sk-scholar-hint"
-                          style={{
-                            background: 'none', border: 'none', padding: 0,
-                            fontFamily: "'Cormorant Garamond', serif",
-                            fontStyle: 'italic', fontSize: 11,
-                            color: 'rgba(212,168,83,.5)',
-                            cursor: 'pointer', letterSpacing: '0.02em',
-                          }}
-                        >
-                          🕌 Need deeper guidance? Speak with a scholar
-                        </button>
+                        {pendingScenarioRef.current === 'intimacy' ? (
+                          /* Intimacy: hard block — no send anyway, no rephrase */
+                          <button
+                            onClick={() => {
+                              pendingSendRef.current = '';
+                              setRayaIntervention(null);
+                              setRephraseText(null);
+                              setMessageInput('');
+                              setTimeout(() => textareaRef.current?.focus(), 50);
+                            }}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              fontSize: 11, color: 'rgba(237,231,218,.55)',
+                              fontFamily: "'Manrope', sans-serif", fontWeight: 400,
+                              padding: '3px 0', letterSpacing: '0.01em',
+                            }}
+                          >
+                            I understand
+                          </button>
+                        ) : pendingScenarioRef.current === 'rude' ? (
+                          /* Rude: gentle intercept — rephrase with dignity, write own, send anyway */
+                          <>
+                            <button
+                              onClick={async () => {
+                                const text = pendingSendRef.current;
+                                pendingSendRef.current = '';
+                                setRayaIntervention(null);
+                                setRephraseText(null);
+                                setMessageInput('');
+                                if (matchId && text) await sendMessage(matchId, text);
+                              }}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: 11, color: 'rgba(212,168,83,.7)',
+                                fontFamily: "'Manrope', sans-serif", fontWeight: 400,
+                                padding: '3px 0', letterSpacing: '0.01em',
+                              }}
+                            >
+                              Send anyway
+                            </button>
+                            <button
+                              onClick={() => {
+                                pendingSendRef.current = '';
+                                setRayaIntervention(null);
+                                setRephraseText(null);
+                                setMessageInput('');
+                                setTimeout(() => textareaRef.current?.focus(), 50);
+                              }}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: 11, color: 'rgba(237,231,218,.4)',
+                                fontFamily: "'Manrope', sans-serif", fontWeight: 400,
+                                padding: '3px 0', letterSpacing: '0.01em',
+                              }}
+                            >
+                              I'll write my own
+                            </button>
+                            <button
+                              onClick={() => {
+                                const rephrased = getRephrasedMessage(
+                                  pendingSendRef.current,
+                                  pendingScenarioRef.current
+                                );
+                                setRephraseText(rephrased);
+                              }}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: 11, color: 'rgba(212,168,83,.85)',
+                                fontFamily: "'Manrope', sans-serif", fontWeight: 400,
+                                padding: '3px 0', letterSpacing: '0.01em',
+                              }}
+                            >
+                              Rephrase with dignity 🤍
+                            </button>
+                          </>
+                        ) : (
+                          /* All other scenarios: standard 3-option panel */
+                          <>
+                            <button
+                              onClick={async () => {
+                                const text = pendingSendRef.current;
+                                pendingSendRef.current = '';
+                                setRayaIntervention(null);
+                                setRephraseText(null);
+                                setMessageInput('');
+                                if (matchId && text) await sendMessage(matchId, text);
+                              }}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: 11, color: 'rgba(212,168,83,.7)',
+                                fontFamily: "'Manrope', sans-serif", fontWeight: 400,
+                                padding: '3px 0', letterSpacing: '0.01em',
+                              }}
+                            >
+                              Send anyway
+                            </button>
+                            <button
+                              onClick={() => {
+                                const rephrased = getRephrasedMessage(
+                                  pendingSendRef.current,
+                                  pendingScenarioRef.current
+                                );
+                                setRephraseText(rephrased);
+                              }}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: 11, color: 'rgba(212,168,83,.85)',
+                                fontFamily: "'Manrope', sans-serif", fontWeight: 400,
+                                padding: '3px 0', letterSpacing: '0.01em',
+                              }}
+                            >
+                              Raya, help me say this better 🤍
+                            </button>
+                            <button
+                              onClick={() => {
+                                pendingSendRef.current = '';
+                                setRayaIntervention(null);
+                                setRephraseText(null);
+                                setMessageInput('');
+                                setTimeout(() => textareaRef.current?.focus(), 50);
+                              }}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: 11, color: 'rgba(237,231,218,.4)',
+                                fontFamily: "'Manrope', sans-serif", fontWeight: 400,
+                                padding: '3px 0', letterSpacing: '0.01em',
+                              }}
+                            >
+                              I'll rewrite it myself
+                            </button>
+                          </>
+                        )}
                       </div>
                     </>
                   ) : (
@@ -1797,6 +1846,7 @@ export function ConversationPage() {
                             pendingSendRef.current = '';
                             setRayaIntervention(null);
                             setRephraseText(null);
+                            setMessageInput('');
                             if (matchId && text) await sendMessage(matchId, text);
                           }}
                           style={{
@@ -1813,6 +1863,7 @@ export function ConversationPage() {
                             pendingSendRef.current = '';
                             setRayaIntervention(null);
                             setRephraseText(null);
+                            setMessageInput('');
                             setTimeout(() => textareaRef.current?.focus(), 50);
                           }}
                           style={{
@@ -1825,21 +1876,6 @@ export function ConversationPage() {
                           I'll write my own 🌿
                         </button>
                       </div>
-                      <div style={{ textAlign: 'center', marginTop: 8 }}>
-                        <button
-                          onClick={() => { /* TODO: open scholar-counsellor support flow */ }}
-                          className="sk-scholar-hint"
-                          style={{
-                            background: 'none', border: 'none', padding: 0,
-                            fontFamily: "'Cormorant Garamond', serif",
-                            fontStyle: 'italic', fontSize: 11,
-                            color: 'rgba(212,168,83,.5)',
-                            cursor: 'pointer', letterSpacing: '0.02em',
-                          }}
-                        >
-                          🕌 Need deeper guidance? Speak with a scholar
-                        </button>
-                      </div>
                     </>
                   )}
                 </motion.div>
@@ -1848,7 +1884,7 @@ export function ConversationPage() {
 
 
           </div>
-        </div>
+        </div>}
       </main>
 
       {/* ── Report modal ──────────────────────────────────────────────── */}
