@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
-from middleware.token_verify import verify_token
+from middleware.token_verify import verify_token, verify_admin
 from firebase_admin_setup import get_firestore_client
 from models.safety import SafetyReportRequest, ReviewBody
 from services import safety_service
@@ -32,7 +32,7 @@ async def file_safety_report(
 
 @router.get("/reports")
 async def get_safety_reports(
-    decoded_token: dict = Depends(verify_token),
+    decoded_token: dict = Depends(verify_admin),
 ):
     db = get_firestore_client()
     docs = (
@@ -53,7 +53,7 @@ async def get_safety_reports(
 async def review_report(
     report_id: str,
     body: ReviewBody,
-    decoded_token: dict = Depends(verify_token),
+    decoded_token: dict = Depends(verify_admin),
 ):
     db = get_firestore_client()
     doc = db.collection("sakinah_safety").document(report_id).get()
