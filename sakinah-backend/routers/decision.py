@@ -31,8 +31,13 @@ async def submit_decision(
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Update the outcome — never send any notification to the other user
+    if uid == data["user_a_uid"]:
+        outcome_field = "decision_outcome_a"
+    else:
+        outcome_field = "decision_outcome_b"
+
     db.collection("sakinah_matches").document(match_id).update(
-        {"decision_outcome": body.outcome}
+        {outcome_field: body.outcome}
     )
 
     if body.outcome == "proceed":

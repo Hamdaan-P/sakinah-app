@@ -58,13 +58,13 @@ async def get_active_matches(decoded_token: dict = Depends(verify_token)):
     as_a = (
         db.collection("sakinah_matches")
         .where("user_a_uid", "==", uid)
-        .where("decision_outcome", "==", None)
+        .where("decision_outcome_a", "==", None)
         .stream()
     )
     as_b = (
         db.collection("sakinah_matches")
         .where("user_b_uid", "==", uid)
-        .where("decision_outcome", "==", None)
+        .where("decision_outcome_a", "==", None)
         .stream()
     )
 
@@ -129,7 +129,7 @@ async def get_wali_conversations(decoded_token: dict = Depends(verify_token)):
     matches = list(
         db.collection("sakinah_matches")
         .where("wali_uid", "==", uid)
-        .where("decision_outcome", "==", None)
+        .where("decision_outcome_a", "==", None)
         .stream()
     )
 
@@ -266,7 +266,7 @@ async def send_wali_request(
     as_a = (
         db.collection("sakinah_matches")
         .where("user_a_uid", "==", seeker_uid)
-        .where("decision_outcome", "==", None)
+        .where("decision_outcome_a", "==", None)
         .limit(1)
         .stream()
     )
@@ -277,7 +277,7 @@ async def send_wali_request(
         as_b = (
             db.collection("sakinah_matches")
             .where("user_b_uid", "==", seeker_uid)
-            .where("decision_outcome", "==", None)
+            .where("decision_outcome_a", "==", None)
             .limit(1)
             .stream()
         )

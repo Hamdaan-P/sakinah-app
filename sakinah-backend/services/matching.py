@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
+from google.cloud.firestore import transactional
 
 
 # Fields the pool is allowed to return — photo and uid are intentionally absent
@@ -127,9 +128,9 @@ def get_pool(uid: str, db) -> list[dict]:
 
     # -- Pre-fetch active match UIDs (mutual_yes=True, decision pending) --
     active_match_uids: set[str] = set()
-    for m in db.collection("sakinah_matches").where("user_a_uid", "==", uid).where("mutual_yes", "==", True).where("decision_outcome", "==", None).stream():
+    for m in db.collection("sakinah_matches").where("user_a_uid", "==", uid).where("mutual_yes", "==", True).where("decision_outcome_a", "==", None).stream():
         active_match_uids.add(m.to_dict()["user_b_uid"])
-    for m in db.collection("sakinah_matches").where("user_b_uid", "==", uid).where("mutual_yes", "==", True).where("decision_outcome", "==", None).stream():
+    for m in db.collection("sakinah_matches").where("user_b_uid", "==", uid).where("mutual_yes", "==", True).where("decision_outcome_a", "==", None).stream():
         active_match_uids.add(m.to_dict()["user_a_uid"])
 
     # -- Pre-fetch UIDs the requester has already passed on --
@@ -184,13 +185,13 @@ def express_interest(from_uid: str, to_uid: str, db) -> dict:
     active_as_a = list(
         db.collection("sakinah_matches")
         .where("user_a_uid", "==", from_uid)
-        .where("decision_outcome", "==", None)
+        .where("decision_outcome_a", "==", None)
         .stream()
     )
     active_as_b = list(
         db.collection("sakinah_matches")
         .where("user_b_uid", "==", from_uid)
-        .where("decision_outcome", "==", None)
+        .where("decision_outcome_a", "==", None)
         .stream()
     )
     if len(active_as_a) + len(active_as_b) >= 2:
@@ -249,19 +250,47 @@ def express_interest(from_uid: str, to_uid: str, db) -> dict:
     db.collection("sakinah_signals").document(signal_id).update({"is_mutual": True})
     db.collection("sakinah_signals").document(mutual_signal.id).update({"is_mutual": True})
 
-    # Create the match at step 1
+    # Create the match inside a transaction to prevent duplicates
     match_id = str(uuid.uuid4())
-    db.collection("sakinah_matches").document(match_id).set({
-        "match_id": match_id,
-        "user_a_uid": from_uid,
-        "user_b_uid": to_uid,
-        "matchflow_step": 1,
-        "mutual_yes": True,
-        "wali_present": False,
-        "unlocked_topics": [],
-        "decision_outcome": None,
-        "created_at": now,
-    })
+
+    @transactional
+    def _create_match_if_not_exists(transaction, new_match_id):
+        existing_ab = list(transaction.get(
+            db.collection("sakinah_matches")
+            .where("user_a_uid", "==", from_uid)
+            .where("user_b_uid", "==", to_uid)
+            .limit(1)
+        ))
+        if existing_ab:
+            return existing_ab[0].to_dict().get("match_id")
+
+        existing_ba = list(transaction.get(
+            db.collection("sakinah_matches")
+            .where("user_a_uid", "==", to_uid)
+            .where("user_b_uid", "==", from_uid)
+            .limit(1)
+        ))
+        if existing_ba:
+            return existing_ba[0].to_dict().get("match_id")
+
+        match_ref = db.collection("sakinah_matches").document(new_match_id)
+        transaction.set(match_ref, {
+            "match_id": new_match_id,
+            "user_a_uid": from_uid,
+            "user_b_uid": to_uid,
+            "matchflow_step": 1,
+            "mutual_yes": True,
+            "wali_present": False,
+            "unlocked_topics": [],
+            "decision_outcome_a": None,
+            "decision_outcome_b": None,
+            "created_at": now,
+        })
+        return None
+
+    existing_id = _create_match_if_not_exists(db.transaction(), match_id)
+    if existing_id:
+        return {"matched": True, "match_id": existing_id}
 
     return {"matched": True, "match_id": match_id}
 
