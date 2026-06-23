@@ -158,6 +158,15 @@ async def send_message(
     db = get_firestore_client()
     _get_match_or_403(body.match_id, uid, db)
 
+    match_data = db.collection("sakinah_matches").document(body.match_id).get().to_dict() or {}
+    wali_uid = match_data.get("wali_uid")
+    wali_present = match_data.get("wali_present", False)
+    if wali_uid and not wali_present:
+        raise HTTPException(
+            status_code=403,
+            detail="Your Wali has been invited but has not yet accepted. Messages are paused until your guardian joins the conversation.",
+        )
+
     if any(p.search(body.message) for p in _CONTACT_INFO_PATTERNS):
         raise HTTPException(
             status_code=400,

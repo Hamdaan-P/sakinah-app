@@ -4,6 +4,51 @@ from middleware.token_verify import verify_token
 from firebase_admin_setup import get_firestore_client
 from datetime import datetime, timezone
 import uuid
+import smtplib
+import os
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+
+def _send_wali_email(wali_email: str, wali_name: str, seeker_name: str):
+    """Send a real email to the Wali notifying them of the invitation."""
+    try:
+        host = os.getenv("MAILTRAP_HOST", "sandbox.smtp.mailtrap.io")
+        port = int(os.getenv("MAILTRAP_PORT", "2525"))
+        username = os.getenv("MAILTRAP_USERNAME", "")
+        password = os.getenv("MAILTRAP_PASSWORD", "")
+
+        if not username or not password:
+            print("[wali-email] MAILTRAP credentials missing — skipping email")
+            return
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "You have been invited as a Guardian on Sakinah"
+        msg["From"] = "notifications@sakinah.app"
+        msg["To"] = wali_email
+
+        body = f"""Assalamu Alaikum {wali_name},
+
+{seeker_name} has invited you to be their Wali (guardian) on Sakinah.
+
+Please open the Sakinah app and go to your notifications to accept or decline this invitation.
+
+Once you accept, you will be able to observe the conversation and provide guidance.
+
+Jazakallahu Khayran,
+The Sakinah Team"""
+
+        msg.attach(MIMEText(body, "plain"))
+
+        with smtplib.SMTP(host, port) as server:
+            server.login(username, password)
+            server.sendmail(msg["From"], [wali_email], msg.as_string())
+
+        print(f"[wali-email] Email sent successfully to {wali_email}")
+
+    except Exception as e:
+        print(f"[wali-email] Failed to send email: {e}")
+
 
 router = APIRouter()
 
@@ -296,6 +341,12 @@ async def send_wali_request(
         "status": "pending",
         "created_at": datetime.now(timezone.utc),
     })
+
+    wali_email = wali_data.get("email", "")
+    if wali_email:
+        _send_wali_email(wali_email, wali_name, seeker_name)
+    else:
+        print(f"[wali-email] No email found for wali_uid={body.wali_uid} — skipping email")
 
     return {"success": True, "request_id": request_id}
 
