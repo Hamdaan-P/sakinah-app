@@ -1,5 +1,4 @@
 import { authGet, authPost } from '../../../lib/api';
-import { getAuth } from 'firebase/auth';
 
 // ── Profile ───────────────────────────────────────────────────────────
 export async function saveRole(role: string) {
@@ -24,9 +23,6 @@ export async function savePreferences(prefs: Record<string, unknown>) {
 
 // ── Pool ──────────────────────────────────────────────────────────────
 export async function getPool() {
-  const token = await getAuth().currentUser?.getIdToken();
-  console.log('Pool request - current user:', getAuth().currentUser?.uid);
-  console.log('Pool request - token exists:', !!token);
   return authGet('/pool/');
 }
 

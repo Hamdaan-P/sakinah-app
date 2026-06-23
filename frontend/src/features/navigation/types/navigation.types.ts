@@ -85,7 +85,7 @@ export const SIDEBAR_SECTIONS: NavSectionConfig[] = [
       { id: 'connections', label: 'Connections', icon: 'UserPlus', path: '/connections' },
       { id: 'messages', label: 'Messages', icon: 'ChatCircleDots', path: '/messages' },
       { id: 'halaqah', label: 'Halaqah', icon: 'UsersRound', path: '/halaqah', badge: 'SOON' },
-      { id: 'matrimony', label: 'Matrimony', icon: 'HeartHandshake', path: '/sakinah' },
+      { id: 'matrimony', label: 'Matrimony', icon: 'HeartHandshake', path: '/sakinah/welcome' },
       { id: 'halal-intimacy', label: 'Intimacy', icon: 'HeartPulse', path: '/halal-intimacy', badge: 'SOON' },
       { id: 'events', label: 'Events', icon: 'CalendarDays', path: '/events', badge: 'SOON' },
     ],
