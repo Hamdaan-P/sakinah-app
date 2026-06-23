@@ -32,25 +32,17 @@ async def submit_kyc(
 ) -> dict:
     api_key = os.getenv("KYC_VENDOR_API_KEY")
     base_url = os.getenv("KYC_VENDOR_BASE_URL")
-
-    # Dev bypass — auto-approve when using placeholder sandbox credentials
-    dev_mode = os.getenv("KYC_VENDOR_API_KEY", "") in ["sandbox_test_key", "", "test"]
-    if dev_mode:
-        db.collection("sakinah_profiles").document(uid).set({
-            "is_verified": True,
-            "is_matchable": True,
-            "kyc_tier": 2,
-            "kycTier": 2,
-            "uid": uid,
-            "gender": "unknown",
-            "age": 25,
-            "kyc_data": {"name": "Dev User", "age": 25, "gender": "unknown"},
-        }, merge=True)
-        db.collection("sakinah_safety").document(session_id).set({
-            "status": "approved",
-            "updated_at": datetime.now(timezone.utc)
-        }, merge=True)
-        return {"status": "approved", "message": "Dev mode: auto-approved"}
+    PLACEHOLDER_KEYS = {"", "test", "sandbox_test_key"}
+    if not api_key or api_key.strip() in PLACEHOLDER_KEYS:
+        return {
+            "status": "error",
+            "message": "KYC verification is not configured. Contact the administrator.",
+        }
+    if not base_url or not base_url.strip():
+        return {
+            "status": "error",
+            "message": "KYC vendor URL is not configured. Contact the administrator.",
+        }
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -114,8 +106,8 @@ async def submit_kyc(
             "message": "Your documents are being reviewed by our team",
         }
 
-    db.collection("sakinah_safety").document(session_id).update({"status": "failed"})
+    db.collection("sakinah_safety").document(session_id).update({"status": "manual_review"})
     return {
-        "status": "failed",
-        "message": "We could not verify your documents. Please try again with clearer images.",
+        "status": "manual_review",
+        "message": "Your documents are being reviewed by our team.",
     }
