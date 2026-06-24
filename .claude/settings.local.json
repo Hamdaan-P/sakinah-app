@@ -19,7 +19,12 @@
       "Bash(python -m uvicorn main:app --reload)",
       "Read(//d/Projects/sakinah-handoff/sakinah-backend/services/**)",
       "PowerShell(Select-String -Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\main.py\" -Pattern \"pool|match|candidate\" -CaseSensitive:$false)",
-      "Bash(firebase deploy *)"
+      "Bash(firebase deploy *)",
+      "PowerShell(Remove-Item \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\services\\\\conversation_service.py\" -Force; if \\(-not \\(Test-Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\services\\\\conversation_service.py\"\\)\\) { \"DELETED: conversation_service.py\" } else { \"FAILED: still exists\" })",
+      "PowerShell(Remove-Item \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\\\\firestore_helpers.py\" -Force; if \\(-not \\(Test-Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\\\\firestore_helpers.py\"\\)\\) { \"DELETED: firestore_helpers.py\" } else { \"FAILED: still exists\" })",
+      "PowerShell(Remove-Item \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\services\\\\auth.py\" -Force; if \\(-not \\(Test-Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\services\\\\auth.py\"\\)\\) { \"DELETED: auth.py\" } else { \"FAILED: still exists\" })",
+      "PowerShell(Remove-Item \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\\\\__init__.py\" -Force; if \\(-not \\(Test-Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\\\\__init__.py\"\\)\\) { \"DELETED: utils/__init__.py\" } else { \"FAILED: still exists\" })",
+      "PowerShell(Remove-Item \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\" -Force; if \\(-not \\(Test-Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\"\\)\\) { \"DELETED: utils/ folder\" } else { \"FAILED: folder still exists\" })"
     ]
   }
 }
