@@ -47,6 +47,15 @@ const RAYA_HELP = [
   },
 ] as const;
 
+interface ScoreBreakdown {
+  niyyah: number;
+  values: number;
+  mirror: number;
+  deen: number;
+  life_goals: number;
+  practical: number;
+}
+
 interface CandidateProfile {
   uid: string;
   display_name: string;
@@ -56,6 +65,7 @@ interface CandidateProfile {
   bio: string;
   wali_linked: boolean;
   gender: string;
+  scores?: ScoreBreakdown;
 }
 
 export function CandidatePage() {
@@ -89,52 +99,77 @@ export function CandidatePage() {
   const city    = candidate?.city ?? '';
   const maslak  = candidate?.maslak ?? '';
 
-  const resonancePoints: Array<{ key: string; parts: React.ReactNode }> = candidate
-    ? [
-        {
-          key: 'r1',
-          parts: (
-            <>
-              Shared intention:{' '}
-              <b style={{ color: '#EDE7DA', fontWeight: 600 }}>a home of calm and worship</b>
-            </>
-          ),
-        },
-        {
-          key: 'r2',
-          parts: (
-            <>
-              You both bring{' '}
-              <b style={{ color: '#EDE7DA', fontWeight: 600 }}>steadiness</b>
-              {' · '}
-              <b style={{ color: '#EDE7DA', fontWeight: 600 }}>quiet generosity</b>
-            </>
-          ),
-        },
-        {
-          key: 'r3',
-          parts: (
-            <>
-              Both{' '}
-              <b style={{ color: '#EDE7DA', fontWeight: 600 }}>learning to let people in</b>
-            </>
-          ),
-        },
-        ...(maslak
-          ? [
-              {
-                key: 'r4',
-                parts: (
-                  <>
-                    Same tradition —{' '}
-                    <b style={{ color: '#EDE7DA', fontWeight: 600 }}>{maslak}</b>
-                  </>
-                ),
-              },
-            ]
-          : []),
-      ]
-    : [];
+  function buildResonancePoints(
+    c: CandidateProfile,
+  ): Array<{ key: string; parts: React.ReactNode }> {
+    const B = ({ children }: { children: React.ReactNode }) => (
+      <b style={{ color: '#EDE7DA', fontWeight: 600 }}>{children}</b>
+    );
+    const s = c.scores ?? {
+      niyyah: 0, values: 0, mirror: 0, deen: 0, life_goals: 0, practical: 0,
+    };
+    const points: Array<{ key: string; parts: React.ReactNode }> = [];
+
+    // Niyyah ≥ 10/15 — shared reason for seeking marriage
+    if (s.niyyah >= 10) {
+      points.push({
+        key: 'niyyah',
+        parts: <>Shared intention: <B>a sincere desire to build a home</B></>,
+      });
+    }
+
+    // Values ≥ 14/20 — what each person brings
+    if (s.values >= 14) {
+      points.push({
+        key: 'values',
+        parts: <>You both bring <B>similar values</B> to a marriage</>,
+      });
+    }
+
+    // Mirror ≥ 17/25 — character alignment from the 9-question reflection
+    if (s.mirror >= 17) {
+      points.push({
+        key: 'mirror',
+        parts: <>Your characters <B>speak to each other</B> across nine dimensions</>,
+      });
+    }
+
+    // Deen ≥ 14/20 — tradition and practice alignment
+    if (s.deen >= 14) {
+      points.push({
+        key: 'deen',
+        parts: <>A shared <B>understanding of the deen</B></>,
+      });
+    }
+
+    // Life goals ≥ 9/13 — life stage and direction
+    if (s.life_goals >= 9) {
+      points.push({
+        key: 'life_goals',
+        parts: <>You are in <B>similar seasons of life</B></>,
+      });
+    }
+
+    // Maslak — always show if present (already real data)
+    if (c.maslak) {
+      points.push({
+        key: 'maslak',
+        parts: <>Same tradition — <B>{c.maslak}</B></>,
+      });
+    }
+
+    // Fallback — if no dimension scored high enough, show one honest line
+    if (points.length === 0) {
+      points.push({
+        key: 'fallback',
+        parts: <>A <B>considered match</B> — reflect on what matters most to you</>,
+      });
+    }
+
+    return points;
+  }
+
+  const resonancePoints = candidate ? buildResonancePoints(candidate) : [];
 
   const metaLine = [
     city,

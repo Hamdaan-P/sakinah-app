@@ -62,6 +62,34 @@ async def get_candidate_profile(
     decoded_token: dict = Depends(verify_token),
 ):
     db = get_firestore_client()
+
+    # Look up caller's precomputed matches to find this candidate's scores
+    caller_uid = decoded_token["uid"]
+    scores = {
+        "niyyah": 0,
+        "values": 0,
+        "mirror": 0,
+        "deen": 0,
+        "life_goals": 0,
+        "practical": 0,
+    }
+    try:
+        caller_doc = db.collection("users").document(caller_uid).get()
+        if caller_doc.exists:
+            precomputed = caller_doc.to_dict().get("precomputed_matches", [])
+            for match in precomputed:
+                if match.get("uid") == candidate_uid:
+                    breakdown = match.get("score_breakdown", {})
+                    scores["niyyah"]     = breakdown.get("niyyah", 0)
+                    scores["values"]     = breakdown.get("values", 0)
+                    scores["mirror"]     = breakdown.get("mirror", 0)
+                    scores["deen"]       = breakdown.get("deen", 0)
+                    scores["life_goals"] = breakdown.get("life_goals", 0)
+                    scores["practical"]  = breakdown.get("practical", 0)
+                    break
+    except Exception:
+        pass  # scores stay at zero — frontend degrades gracefully
+
     doc = db.collection("sakinah_profiles").document(candidate_uid).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Candidate not found")
@@ -77,4 +105,5 @@ async def get_candidate_profile(
         "bio": data.get("bio", ""),
         "wali_linked": data.get("wali_linked", False),
         "gender": data.get("gender", ""),
+        "scores": scores,
     }
