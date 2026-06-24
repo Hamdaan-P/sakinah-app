@@ -181,3 +181,167 @@
   transform: scale(1.08);
   box-shadow: 0 6px 32px rgba(212,168,83,.36), 0 0 0 1px rgba(212,168,83,.28) !important;
 }
+
+/* ── Sakinah SubNav Rail ─────────────────────────────────────────── */
+.sk-subnav-rail {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .sk-subnav-rail {
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    min-width: 240px;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    background: #07090f;
+    border-right: 1px solid rgba(212, 168, 83, 0.12);
+    padding: 28px 0 20px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 168, 83, 0.2) transparent;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .sk-subnav-rail::-webkit-scrollbar { width: 4px; }
+  .sk-subnav-rail::-webkit-scrollbar-thumb {
+    background: rgba(212, 168, 83, 0.2);
+    border-radius: 4px;
+  }
+
+  /* Brand */
+  .sk-subnav-brand {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid rgba(212, 168, 83, 0.1);
+    margin-bottom: 20px;
+  }
+
+  .sk-subnav-brand h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: #EDE7DA;
+    letter-spacing: 0.5px;
+    line-height: 1.1;
+  }
+
+  .sk-subnav-brand p {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(212, 168, 83, 0.55);
+    margin-top: 5px;
+  }
+
+  /* Groups */
+  .sk-subnav-groups {
+    flex: 1;
+    padding: 0 12px;
+  }
+
+  .sk-subnav-group {
+    margin-bottom: 22px;
+  }
+
+  .sk-subnav-group h2 {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #5f6675;
+    padding: 0 8px;
+    margin-bottom: 6px;
+  }
+
+  /* Nav items */
+  .sk-subnav-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: #9aa0ac;
+    font-size: 12.5px;
+    font-weight: 400;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+    margin-bottom: 2px;
+  }
+
+  .sk-subnav-item:hover {
+    background: rgba(212, 168, 83, 0.06);
+    color: #EDE7DA;
+  }
+
+  .sk-subnav-item.active {
+    background: rgba(212, 168, 83, 0.1);
+    color: #e7c984;
+    font-weight: 500;
+  }
+
+  .sk-subnav-label {
+    flex: 1;
+  }
+
+  /* Footer */
+  .sk-subnav-footer {
+    padding: 16px 20px 0;
+    border-top: 1px solid rgba(212, 168, 83, 0.1);
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sk-subnav-exit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: #5f6675;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 0;
+    transition: color 0.18s;
+  }
+
+  .sk-subnav-exit:hover {
+    color: #9aa0ac;
+  }
+
+  .sk-subnav-presence {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: #5f6675;
+  }
+
+  .sk-presence-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #7FB07A;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px rgba(127, 176, 122, 0.5);
+  }
+}
+
+/* ── Sakinah Layout shell ────────────────────────────────────────── */
+.sk-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #07090f;
+}
+
+.sk-layout-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}

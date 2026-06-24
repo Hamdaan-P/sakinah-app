@@ -150,6 +150,22 @@ export function SakinahSidebar({ activeItem }: { activeItem: string }) {
           </div>
         ))}
       </div>
+      {/* Footer — Exit to Zaryah+ and Raya is awake */}
+      <div style={{ marginTop: 28, borderTop: '1px solid rgba(255,255,255,.06)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <button
+          onClick={() => navigate('/')}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', color: '#5f6675', fontSize: 12, cursor: 'pointer', padding: '4px 0', fontFamily: "'Manrope', sans-serif" }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#9aa0ac')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#5f6675')}
+        >
+          <span>↩</span>
+          <span>Exit to Zaryah+</span>
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, color: '#5f6675' }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#7FB07A', flexShrink: 0, display: 'inline-block', boxShadow: '0 0 6px rgba(127,176,122,0.5)' }} />
+          <span>Raya is awake</span>
+        </div>
+      </div>
     </aside>
   );
 }
