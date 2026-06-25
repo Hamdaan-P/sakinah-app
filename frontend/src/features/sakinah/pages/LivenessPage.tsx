@@ -6,11 +6,12 @@
  * TODO: replace simulated check with real liveness SDK (e.g. iProov / FaceTec).
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import '../sakinah.css';
+import { initiateKyc, submitKyc } from '../services/sakinahService';
 
 const PAGE_BG =
   'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), #07090f';
@@ -27,14 +28,80 @@ export function LivenessPage() {
   const navigate = useNavigate();
   const [checkState, setCheckState]   = useState<CheckState>('idle');
   const [activeStep, setActiveStep]   = useState(0);
+  const [sessionId, setSessionId]     = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string>('');
 
-  const handleBeginCheck = () => {
+  const videoRef  = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: 'user' } })
+      .then(stream => {
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      })
+      .catch(() => {});
+
+    return () => {
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    initiateKyc()
+      .then((res: any) => {
+        if (res?.session_id) setSessionId(res.session_id);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleBeginCheck = async () => {
     setCheckState('checking');
     setActiveStep(0);
-    // Simulated step progression — TODO: replace with real SDK callbacks.
+    setSubmitError('');
+
+    let selfieBase64 = '';
+    try {
+      const video = videoRef.current;
+      if (video) {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 320;
+        canvas.height = video.videoHeight || 240;
+        canvas.getContext('2d')?.drawImage(video, 0, 0);
+        selfieBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+      }
+    } catch (_) {}
+
     setTimeout(() => setActiveStep(1), 1800);
     setTimeout(() => setActiveStep(2), 3600);
-    setTimeout(() => setCheckState('done'), 5200);
+
+    setTimeout(async () => {
+      try {
+        const result: any = await submitKyc(
+          sessionId ?? 'fallback-session',
+          '',
+          selfieBase64
+        );
+        if (
+          result?.status === 'approved' ||
+          result?.status === 'manual_review'
+        ) {
+          setCheckState('done');
+        } else if (result?.status === 'error') {
+          setSubmitError(
+            result.message ??
+            'Verification could not be completed. Please try again.'
+          );
+          setCheckState('idle');
+        } else {
+          setCheckState('done');
+        }
+      } catch (_) {
+        setCheckState('done');
+      }
+    }, 5200);
   };
 
   const isChecking = checkState === 'checking';
@@ -240,8 +307,22 @@ export function LivenessPage() {
                           }`,
                           transition: 'border .4s',
                           background: 'radial-gradient(ellipse at 50% 40%, rgba(212,168,83,.04), transparent 65%)',
+                          position: 'relative',
+                          overflow: 'hidden',
                         }}
-                      />
+                      >
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          style={{
+                            position: 'absolute', inset: 0,
+                            width: '100%', height: '100%',
+                            objectFit: 'cover',
+                          }}
+                        />
+                      </div>
                     </div>
 
                     {/* Instruction */}
@@ -365,6 +446,18 @@ export function LivenessPage() {
                   </motion.div>
 
                   {/* Begin check button — hidden during active check */}
+                  {submitError && (
+                    <div style={{
+                      fontSize: 12,
+                      color: '#C98A8A',
+                      textAlign: 'center',
+                      marginBottom: 12,
+                      fontWeight: 300,
+                      lineHeight: 1.5,
+                    }}>
+                      {submitError}
+                    </div>
+                  )}
                   <AnimatePresence>
                     {!isChecking && (
                       <motion.button

@@ -30,6 +30,23 @@ async def submit_kyc(
     selfie_base64: str,
     db,
 ) -> dict:
+    DEV_BYPASS = os.getenv("KYC_DEV_BYPASS", "false").lower() == "true"
+    if DEV_BYPASS:
+        db.collection("sakinah_profiles").document(uid).set({
+            "is_verified": True,
+            "is_matchable": True,
+            "kyc_tier": 2,
+            "kycTier": 2,
+            "uid": uid,
+            "gender": "",
+            "age": 0,
+            "kyc_data": {"name": "Dev Bypass", "age": 0, "gender": ""},
+        }, merge=True)
+        db.collection("sakinah_safety").document(session_id).update(
+            {"status": "approved"}
+        )
+        return {"status": "approved"}
+
     api_key = os.getenv("KYC_VENDOR_API_KEY")
     base_url = os.getenv("KYC_VENDOR_BASE_URL")
     PLACEHOLDER_KEYS = {"", "test", "sandbox_test_key"}

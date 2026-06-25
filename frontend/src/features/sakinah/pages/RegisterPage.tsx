@@ -24,6 +24,29 @@ const STEP_META = [
 
 const ID_TYPES = ['Aadhaar · DigiLocker', 'Passport', 'PAN', 'Voter ID'];
 
+const INDIAN_CITIES = [
+  'Hyderabad', 'Secunderabad', 'Chennai', 'Mumbai', 'Bangalore', 'Bengaluru',
+  'Delhi', 'New Delhi', 'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Lucknow',
+  'Surat', 'Kanpur', 'Nagpur', 'Visakhapatnam', 'Bhopal', 'Patna', 'Vadodara',
+  'Coimbatore', 'Ludhiana', 'Agra', 'Vellore', 'Madurai', 'Mysore', 'Mysuru',
+  'Noida', 'Gurugram', 'Gurgaon', 'Kochi', 'Thiruvananthapuram', 'Kozhikode',
+];
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
 export function RegisterPage() {
   const navigate = useNavigate();
 
@@ -37,17 +60,20 @@ export function RegisterPage() {
   const [snapUrl, setSnapUrl]         = useState<string | null>(null);
   const [selectedId, setSelectedId]   = useState('Aadhaar · DigiLocker');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [fileError, setFileError]      = useState('');
   const [isDragging, setIsDragging]   = useState(false);
   const [city, setCity]               = useState('');
+  const [cityError, setCityError]     = useState('');
   const [shakingId, setShakingId]     = useState<string | null>(null);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [kycSessionId, setKycSessionId] = useState<string>('');
 
-  const videoRef        = useRef<HTMLVideoElement>(null);
-  const streamRef       = useRef<MediaStream | null>(null);
-  const otpRefs         = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
-  const resendTimerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const fileInputRef    = useRef<HTMLInputElement>(null);
+  const videoRef              = useRef<HTMLVideoElement>(null);
+  const streamRef             = useRef<MediaStream | null>(null);
+  const otpRefs               = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
+  const resendTimerRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fileInputRef          = useRef<HTMLInputElement>(null);
+  const recaptchaVerifierRef  = useRef<RecaptchaVerifier | null>(null);
 
   const meta = STEP_META[step - 1];
 
@@ -67,7 +93,24 @@ export function RegisterPage() {
 
   // ── Step 1: Phone ────────────────────────────────────────────────────────
   const sendOtp = async () => {
-    if (!city.trim()) { shake('city-field'); return; }
+    const trimmedCity = city.trim();
+    if (!trimmedCity) {
+      setCityError('Please enter your city to continue');
+      shake('city-field');
+      return;
+    }
+    const lower = trimmedCity.toLowerCase();
+    const exactMatch = INDIAN_CITIES.find(c => c.toLowerCase() === lower);
+    if (!exactMatch) {
+      const closeMatch = INDIAN_CITIES.find(c => levenshtein(lower, c.toLowerCase()) <= 2);
+      setCityError(
+        closeMatch
+          ? `Did you mean ${closeMatch}? Please check the spelling`
+          : 'Please enter a valid Indian city name'
+      );
+      shake('city-field');
+      return;
+    }
     if (phone.length < 10) return;
 
     // DEV BYPASS for test number
@@ -88,26 +131,15 @@ export function RegisterPage() {
 
     try {
       const auth = getAuth();
-      // Clear existing recaptcha
-      if ((window as any).recaptchaVerifier) {
-        try {
-          (window as any).recaptchaVerifier.clear();
-        } catch (e) {}
-        (window as any).recaptchaVerifier = null;
+
+      if (!recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+        });
       }
 
-      // Reset the container div by replacing it with a fresh empty div
-      const oldContainer = document.getElementById('recaptcha-container');
-      if (oldContainer) {
-        oldContainer.innerHTML = '';
-      }
-
-      const verifier = new RecaptchaVerifier(getAuth(), 'recaptcha-container', {
-        size: 'invisible',
-      });
-      (window as any).recaptchaVerifier = verifier;
       const fullPhone = phone.startsWith('+') ? phone : `+91${phone}`;
-      const result = await signInWithPhoneNumber(auth, fullPhone, (window as any).recaptchaVerifier);
+      const result = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifierRef.current);
       setConfirmationResult(result);
       const raw = phone.replace(/\D/g, '');
       const masked = '+91 ' + raw.slice(0, 5).replace(/./g, '•') + ' ••' + raw.slice(-3);
@@ -242,8 +274,31 @@ export function RegisterPage() {
   // Cleanup on unmount
   useEffect(() => () => stopCamera(), [stopCamera]);
 
+  useEffect(() => {
+    return () => {
+      if (recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current.clear();
+        recaptchaVerifierRef.current = null;
+      }
+    };
+  }, []);
+
   // ── Step 4: Gov ID upload ─────────────────────────────────────────────────
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+  const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
   function applyFile(f: File) {
+    if (!ALLOWED_TYPES.includes(f.type)) {
+      setFileError('Only JPG, PNG or PDF files are accepted for government ID');
+      setUploadedFile(null);
+      return;
+    }
+    if (f.size > MAX_FILE_BYTES) {
+      setFileError('File size must be under 5MB');
+      setUploadedFile(null);
+      return;
+    }
+    setFileError('');
     setUploadedFile(f);
   }
 
@@ -253,9 +308,11 @@ export function RegisterPage() {
     const f = e.dataTransfer.files[0];
     if (f) {
       applyFile(f);
-      const dt = new DataTransfer();
-      dt.items.add(f);
-      if (fileInputRef.current) fileInputRef.current.files = dt.files;
+      if (ALLOWED_TYPES.includes(f.type) && f.size <= MAX_FILE_BYTES) {
+        const dt = new DataTransfer();
+        dt.items.add(f);
+        if (fileInputRef.current) fileInputRef.current.files = dt.files;
+      }
     }
   }
 
@@ -375,14 +432,19 @@ export function RegisterPage() {
                   <label style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(212,168,83,.55)', display: 'block', marginBottom: 9 }}>
                     City
                   </label>
-                  <div className={`sk-field-group${shakingId === 'city-field' ? ' sk-shake' : ''}`} style={{ display: 'flex', border: '1px solid rgba(255,255,255,.06)', borderRadius: 13, overflow: 'hidden', background: 'rgba(255,255,255,.018)', marginBottom: 14 }}>
+                  <div className={`sk-field-group${shakingId === 'city-field' ? ' sk-shake' : ''}`} style={{ display: 'flex', border: '1px solid rgba(255,255,255,.06)', borderRadius: 13, overflow: 'hidden', background: 'rgba(255,255,255,.018)', marginBottom: cityError ? 6 : 14 }}>
                     <input
                       type="text" placeholder="e.g. Mumbai" autoComplete="address-level2"
-                      value={city} onChange={e => setCity(e.target.value)}
+                      value={city} onChange={e => { setCity(e.target.value); setCityError(''); }}
                       onKeyDown={e => e.key === 'Enter' && sendOtp()}
                       style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', padding: '14px 16px', fontFamily: "'Manrope', sans-serif", fontSize: 14, color: '#EDE7DA', outline: 'none' }}
                     />
                   </div>
+                  {cityError && (
+                    <div style={{ fontSize: 12, color: '#C98A8A', marginBottom: 10, paddingLeft: 4 }}>
+                      {cityError}
+                    </div>
+                  )}
                   <label style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(212,168,83,.55)', display: 'block', marginBottom: 9 }}>
                     Your phone number
                   </label>
@@ -548,7 +610,12 @@ export function RegisterPage() {
                       </div>
                     )}
                   </div>
-                  <input ref={fileInputRef} type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) applyFile(f); }} />
+                  <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) applyFile(f); }} />
+                  {fileError && (
+                    <div style={{ fontSize: 12, color: '#C98A8A', marginTop: -8, marginBottom: 10, paddingLeft: 4 }}>
+                      {fileError}
+                    </div>
+                  )}
 
                   <Insight>
                     We extract <b style={{ color: '#9cc596' }}>name, age, and gender only</b>. Raw Aadhaar numbers are never stored. Your ID is never shown to a match — it keeps out fakes and makes bans permanent.
