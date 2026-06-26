@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import '../sakinah.css';
+import RayaOrbButton from '../components/RayaOrbButton';
 
 const PAGE_BG =
   'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), #07090f';
@@ -255,6 +256,7 @@ export function OverviewPage() {
           </div>
         </div>
       </main>
+      <RayaOrbButton page="overview" />
     </div>
   );
 }

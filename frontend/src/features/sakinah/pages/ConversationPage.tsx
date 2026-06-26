@@ -17,6 +17,7 @@ import { useConversation } from '../hooks';
 import { sendMessage, checkTone, inviteWali, fileSafetyReport, signalReady, getPendingWaliRequest, approveWaliRequest, searchWaliUser, sendWaliRequest } from '../services/sakinahService';
 import { db, auth } from '@/config/firebase.config';
 import '../sakinah.css';
+import RayaOrbButton from '../components/RayaOrbButton';
 
 const PAGE_BG =
   'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), #07090f';
@@ -1997,6 +1998,7 @@ export function ConversationPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      <RayaOrbButton page="conversation" />
     </div>
   );
 }

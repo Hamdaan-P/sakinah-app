@@ -16,6 +16,7 @@ import { SakinahSidebar } from './components/SakinahSidebar';
 import { getConversation, submitDecision } from '../services/sakinahService';
 import { auth } from '@/config/firebase.config';
 import '../sakinah.css';
+import RayaOrbButton from '../components/RayaOrbButton';
 
 const PAGE_BG =
   'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.06), transparent 60%), #07090f';
@@ -442,6 +443,7 @@ export function DecisionPage() {
           </div>
         </div>
       </main>
+      <RayaOrbButton page="decision" />
     </div>
   );
 }

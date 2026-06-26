@@ -10,6 +10,7 @@ import { savePreferences, computePool } from '../services/sakinahService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import '../sakinah.css';
+import RayaOrbButton from '../components/RayaOrbButton';
 
 const PAGE_BG =
   'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), #07090f';
@@ -20,7 +21,7 @@ const PAGE_BG =
 
 interface Prefs {
   ageMin: number; ageMax: number;
-  heightImportant: boolean; heightCm: number;
+  heightMin: number; heightMax: number;
   priorMarriage: string; childrenFromPrev: string;
   dailySalah: string; quranRelationship: string; hijabModestDress: string;
   lifestyle: string[];
@@ -33,7 +34,7 @@ interface Prefs {
 }
 
 const INIT: Prefs = {
-  ageMin: 24, ageMax: 34, heightImportant: true, heightCm: 165,
+  ageMin: 24, ageMax: 34, heightMin: 150, heightMax: 190,
   priorMarriage: '', childrenFromPrev: '',
   dailySalah: '', quranRelationship: '', hijabModestDress: '', lifestyle: [],
   educationLevel: '', career: '', financialStability: '', incomeDifference: '',
@@ -206,35 +207,24 @@ function AgeSlider({
 }
 
 function HeightSlider({
-  value, important, onValue, onImportant,
-}: { value: number; important: boolean; onValue: (v: number) => void; onImportant: (v: boolean) => void }) {
-  const LO = 140; const HI = 200;
-  const pct = ((value - LO) / (HI - LO)) * 100;
+  min, max, onChange,
+}: { min: number; max: number; onChange: (lo: number, hi: number) => void }) {
+  const LO = 140; const HI = 220;
+  const pct = (v: number) => ((v - LO) / (HI - LO)) * 100;
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{
-          fontSize: 12.5, fontFamily: "'JetBrains Mono', monospace",
-          color: important ? '#EDE7DA' : '#5f6675', transition: 'color .2s',
-        }}>
-          {value} cm
-        </span>
-        <button type="button" onClick={() => onImportant(!important)} style={{
-          fontSize: 11.5, padding: '5px 12px', borderRadius: 20, cursor: 'pointer',
-          border: `1px solid ${!important ? 'rgba(212,168,83,.45)' : 'rgba(255,255,255,.1)'}`,
-          background: !important ? 'rgba(212,168,83,.08)' : 'transparent',
-          color: !important ? '#e7c984' : '#5f6675',
-          fontFamily: "'Manrope', sans-serif", transition: 'all .15s',
-        }}>
-          Not important
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 16 }}>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#EDE7DA' }}>{min} cm</span>
+        <span style={{ color: '#5f6675', fontSize: 11 }}>to</span>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#EDE7DA' }}>{max} cm</span>
       </div>
-      <div style={{ position: 'relative', height: 28, margin: '0 6px', opacity: important ? 1 : 0.3, transition: 'opacity .2s' }}>
+      <div style={{ position: 'relative', height: 28, margin: '0 6px' }}>
         <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: 0, right: 0, height: 4, background: 'rgba(255,255,255,.08)', borderRadius: 2, pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: 0, width: `${pct}%`, height: 4, background: '#D4A853', borderRadius: 2, transition: 'width .04s', pointerEvents: 'none' }} />
-        <input type="range" className="sk-range" min={LO} max={HI} value={value}
-          onChange={e => { if (important) onValue(+e.target.value); }}
-          style={{ pointerEvents: important ? undefined : 'none' }} />
+        <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: `${pct(min)}%`, right: `${100 - pct(max)}%`, height: 4, background: 'linear-gradient(to right, #c8943c, #D4A853)', borderRadius: 2, transition: 'left .04s, right .04s', pointerEvents: 'none' }} />
+        <input type="range" className="sk-range" min={LO} max={HI} value={min}
+          onChange={e => onChange(Math.min(+e.target.value, max - 1), max)} />
+        <input type="range" className="sk-range" min={LO} max={HI} value={max}
+          onChange={e => onChange(min, Math.max(+e.target.value, min + 1))} />
       </div>
     </div>
   );
@@ -288,8 +278,8 @@ export function PreferencesPage() {
               onChange={(lo, hi) => setPrefs(p => ({ ...p, ageMin: lo, ageMax: hi }))} />
           </Q>
           <Q label="Height preference">
-            <HeightSlider value={prefs.heightCm} important={prefs.heightImportant}
-              onValue={v => set('heightCm', v)} onImportant={v => set('heightImportant', v)} />
+            <HeightSlider min={prefs.heightMin} max={prefs.heightMax}
+              onChange={(lo, hi) => setPrefs(p => ({ ...p, heightMin: lo, heightMax: hi }))} />
           </Q>
 
           <Q label="Prior marriage">
@@ -724,6 +714,7 @@ export function PreferencesPage() {
         </AnimatePresence>
 
       </main>
+      <RayaOrbButton page="preferences" bottomOffset="100px" />
     </div>
   );
 }

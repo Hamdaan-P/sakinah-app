@@ -5,26 +5,178 @@
  * TODO: replace static signals + quote with values derived via sakinahService once service layer is wired.
  */
 
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import '../sakinah.css';
 
 const PAGE_BG =
   'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), #07090f';
 
-// Placeholder portrait — static for v1; will be derived from Mirror answers via backend.
-const PORTRAIT_QUOTE =
-  '“Someone who finds steadiness in routine, gives quietly, and is learning to let people in.”';
+interface Signal {
+  label: string;
+  value: string;
+  pct: number;
+}
 
-const SIGNALS: { label: string; value: string; pct: number }[] = [
-  { label: 'Steadiness under pressure', value: 'High',    pct: 82 },
-  { label: 'Quiet generosity',          value: 'High',    pct: 78 },
-  { label: 'Emotional openness',        value: 'Growing', pct: 48 },
-];
+interface Portrait {
+  quote: string;
+  signals: Signal[];
+}
+
+function buildPortrait(
+  mirrorAnswers: Array<{ qi: number; choice: string }>
+): Portrait {
+
+  // Build answer map — qi=8 (Closeness) never scored by design
+  const ans: Record<number, string> = {};
+  mirrorAnswers.forEach(a => {
+    if (typeof a.qi === 'number' && a.qi !== 8) {
+      ans[a.qi] = (a.choice ?? '').toLowerCase().trim();
+    }
+  });
+
+  // Classify each stored answer cleanly
+  // 'a' = chose option A
+  // 'b' = chose option B
+  // 'typed' = user wrote their own answer
+  // 'skip' = skipped
+  function classify(val: string | undefined): 'a' | 'b' | 'typed' | 'skip' {
+    if (!val || val === 'skip') return 'skip';
+    if (val === 'a') return 'a';
+    if (val === 'b') return 'b';
+    return 'typed';
+  }
+
+  const c0 = classify(ans[0]); // Parents & Family
+  const c5 = classify(ans[5]); // Responsibility
+  const c6 = classify(ans[6]); // Expectations
+  const c7 = classify(ans[7]); // Shared Finances
+
+  // Count how many answers across ALL dimensions
+  // were typed (not a, b, or skip)
+  const typedCount = Object.values(ans).filter(
+    v => v !== 'a' && v !== 'b' && v !== 'skip' && v !== ''
+  ).length;
+
+  // ── TRAIT 1: Steadiness — derived from qi=6 ──────────────────────
+  // a = prefers calm and predictable home
+  // b = drawn toward growth and change
+  // typed = has their own nuanced sense of peace
+  const trait1: Signal =
+    c6 === 'a'
+      ? { label: 'Steadiness under pressure',
+          value: 'A defining strength',     pct: 88 }
+    : c6 === 'typed'
+      ? { label: 'Steadiness under pressure',
+          value: 'Defined on their own terms', pct: 74 }
+      : { label: 'Steadiness under pressure',
+          value: 'Still unfolding',          pct: 50 };
+
+  // ── TRAIT 2: Generosity — derived from qi=7 ──────────────────────
+  // a = careful and security-minded
+  // b = generous and open-handed
+  // typed = has a nuanced relationship with giving
+  const trait2: Signal =
+    c7 === 'b'
+      ? { label: 'Quiet generosity',
+          value: 'A defining strength',      pct: 84 }
+    : c7 === 'typed'
+      ? { label: 'Quiet generosity',
+          value: 'Expressed thoughtfully',   pct: 70 }
+      : { label: 'Quiet generosity',
+          value: 'Growing',                  pct: 58 };
+
+  // ── TRAIT 3: Emotional openness — derived from qi=0 ──────────────
+  // a = reaches toward family when things are hard
+  // b = finds solitude first, then reaches out
+  // typed = their relationship with closeness is layered
+  const trait3: Signal =
+    c0 === 'a'
+      ? { label: 'Emotional openness',
+          value: 'Growing',                  pct: 65 }
+    : c0 === 'typed'
+      ? { label: 'Emotional openness',
+          value: 'Layered and genuine',      pct: 60 }
+      : { label: 'Emotional openness',
+          value: 'Still unfolding',          pct: 40 };
+
+  // ── TRAIT 4 (conditional): Depth of self-knowledge ───────────────
+  // Emerges when the user typed 2 or more of their own answers.
+  // The act of writing their own answer on multiple dimensions
+  // reveals genuine self-awareness — a character trait the
+  // product values. We never reveal what they wrote.
+  const trait4: Signal | null =
+    typedCount >= 2
+      ? { label: 'Depth of self-knowledge',
+          value: 'A defining strength',      pct: 86 }
+      : null;
+
+  // ── QUOTE — built from qi=0, qi=5, qi=6 ──────────────────────────
+  const part0 =
+    c0 === 'a'       ? 'finds steadiness in family and roots'
+    : c0 === 'typed' ? 'holds their own sense of what home means'
+    :                  'carves their own quiet path';
+
+  const part5 =
+    c5 === 'a'       ? 'brings structure to a shared home'
+    : c5 === 'typed' ? 'navigates home life on their own terms'
+    :                  'adapts gracefully to what life asks';
+
+  const part6 =
+    c6 === 'a'       ? 'finds peace in the calm and dependable'
+    : c6 === 'typed' ? 'knows what peace means to them'
+    :                  'is drawn toward growth and the unexpected';
+
+  // Build the final signals array
+  // If trait4 earned, replace trait3 with it
+  // so the card never shows more than 3 signals
+  const signals: Signal[] = trait4
+    ? [trait1, trait2, trait4]
+    : [trait1, trait2, trait3];
+
+  return {
+    quote: `”Someone who ${part0}, ${part5}, and ${part6}.”`,
+    signals,
+  };
+}
+
+const FALLBACK_PORTRAIT: Portrait = {
+  quote: '”Someone who finds steadiness in routine, gives quietly, and is learning to let people in.”',
+  signals: [
+    { label: 'Steadiness under pressure', value: 'High',    pct: 82 },
+    { label: 'Quiet generosity',          value: 'High',    pct: 78 },
+    { label: 'Emotional openness',        value: 'Growing', pct: 48 },
+  ],
+};
 
 export function PortraitPage() {
   const navigate = useNavigate();
+  const [portrait, setPortrait] = useState<Portrait>(FALLBACK_PORTRAIT);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) return;
+    const db = getFirestore();
+    getDoc(doc(db, 'users', user.uid)).then(snap => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const raw = data.sakinah_mirror;
+      let answers: Array<{ qi: number; choice: string }> = [];
+      if (Array.isArray(raw)) {
+        answers = raw;
+      } else if (raw && typeof raw === 'object' && Array.isArray(raw.answers)) {
+        answers = raw.answers;
+      }
+      if (answers.length > 0) {
+        setPortrait(buildPortrait(answers));
+      }
+    }).catch(() => {});
+  }, []);
 
   return (
     <div
@@ -155,7 +307,7 @@ export function PortraitPage() {
                   padding: '4px 6px',
                 }}
               >
-                {PORTRAIT_QUOTE}
+                {portrait.quote}
               </div>
             </motion.div>
 
@@ -202,7 +354,7 @@ export function PortraitPage() {
               </div>
 
               {/* Signal rows */}
-              {SIGNALS.map((sig, i) => (
+              {portrait.signals.map((sig, i) => (
                 <div key={sig.label} style={{ marginTop: i > 0 ? 11 : 0 }}>
                   <div
                     style={{
@@ -211,7 +363,7 @@ export function PortraitPage() {
                       alignItems: 'center',
                       padding: '11px 0',
                       borderBottom:
-                        i < SIGNALS.length - 1
+                        i < portrait.signals.length - 1
                           ? '1px solid rgba(255,255,255,.06)'
                           : 'none',
                     }}
@@ -263,26 +415,6 @@ export function PortraitPage() {
                   </div>
                 </div>
               ))}
-            </motion.div>
-
-            {/* ── Insight note ──────────────────────────────────────────── */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.20 }}
-              style={{
-                fontSize: 11.5,
-                lineHeight: 1.6,
-                color: '#9aa0ac',
-                fontWeight: 300,
-                borderLeft: '2px solid #D4A853',
-                paddingLeft: 13,
-                margin: '13px 0',
-              }}
-            >
-              No raw answer is shown to anyone — only soft, derived resonance, after mutual
-              interest. Standing comes from <b style={{ color: '#EDE7DA', fontWeight: 500 }}>verification</b>,
-              not displayed worship.
             </motion.div>
 
             {/* ── Raya closing note ─────────────────────────────────────── */}

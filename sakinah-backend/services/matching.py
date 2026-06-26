@@ -23,8 +23,14 @@ def _normalise_mirror(value) -> list:
     return []
 
 
-def _score_candidate(req_user: dict, cand_user: dict, cand_profile: dict) -> int:
+def _score_candidate(req_user: dict, cand_user: dict, cand_profile: dict) -> tuple[int, dict]:
     score = 0
+    niyyah_score     = 0
+    values_score     = 0
+    mirror_score     = 0
+    deen_score       = 0
+    life_goals_score = 0
+    practical_score  = 0
 
     req_niyyah  = req_user.get("sakinah_niyyah")  or {}
     cand_niyyah = cand_user.get("sakinah_niyyah") or {}
@@ -35,85 +41,100 @@ def _score_candidate(req_user: dict, cand_user: dict, cand_profile: dict) -> int
     req_prefs   = req_user.get("sakinah_preferences")  or {}
     cand_prefs  = cand_user.get("sakinah_preferences") or {}
 
-    # ── A) NIYYAH — 15 pts ────────────────────────────────────────────────────
+    # ── A) NIYYAH — 15 pts ──────────────────────────────────────────
     if req_niyyah.get("whyMarriage") and req_niyyah["whyMarriage"] == cand_niyyah.get("whyMarriage"):
-        score += 8
+        niyyah_score += 8
     if req_niyyah.get("lifeSeason") and req_niyyah["lifeSeason"] == cand_niyyah.get("lifeSeason"):
-        score += 7
+        niyyah_score += 7
+    score += niyyah_score
 
-    # ── B) VALUES — 20 pts ────────────────────────────────────────────────────
+    # ── B) VALUES — 20 pts ──────────────────────────────────────────
     req_tradition  = req_values.get("tradition", "")
     cand_tradition = cand_values.get("tradition", "")
     if req_tradition and req_tradition == cand_tradition:
-        score += 10
+        values_score += 10
 
     tradition_share = req_values.get("traditionShare", "")
     if tradition_share == "must":
         if req_tradition and req_tradition == cand_tradition:
-            score += 5
+            values_score += 5
     elif tradition_share == "open-within":
-        score += 3
+        values_score += 3
     else:
-        score += 1
+        values_score += 1
 
     if req_values.get("valueChoice") and req_values["valueChoice"] == cand_values.get("valueChoice"):
-        score += 3
+        values_score += 3
     if req_values.get("lifeStage") and req_values["lifeStage"] == cand_values.get("lifeStage"):
-        score += 2
+        values_score += 2
+    score += values_score
 
-    # ── C) MIRROR — 25 pts ────────────────────────────────────────────────────
+    # ── C) MIRROR — 25 pts ──────────────────────────────────────────
     req_mirror_map  = {a["qi"]: a.get("choice") for a in req_mirror  if isinstance(a, dict)}
     cand_mirror_map = {a["qi"]: a.get("choice") for a in cand_mirror if isinstance(a, dict)}
     for qi, pts in _MIRROR_SCORES.items():
         req_choice  = req_mirror_map.get(qi)
         cand_choice = cand_mirror_map.get(qi)
         if req_choice and cand_choice and req_choice == cand_choice:
-            score += pts
+            mirror_score += pts
+    score += mirror_score
 
-    # ── D) DEEN & PRACTICE — 20 pts ──────────────────────────────────────────
+    # ── D) DEEN & PRACTICE — 20 pts ─────────────────────────────────
     if req_prefs.get("dailySalah") and req_prefs["dailySalah"] == cand_prefs.get("dailySalah"):
-        score += 6
+        deen_score += 6
     if req_prefs.get("hijabModestDress") and req_prefs["hijabModestDress"] == cand_prefs.get("hijabModestDress"):
-        score += 5
+        deen_score += 5
     if req_prefs.get("quranRelationship") and req_prefs["quranRelationship"] == cand_prefs.get("quranRelationship"):
-        score += 5
+        deen_score += 5
     req_lifestyle  = set(req_prefs.get("lifestyle")  or [])
     cand_lifestyle = set(cand_prefs.get("lifestyle") or [])
     if req_lifestyle & cand_lifestyle:
-        score += 4
+        deen_score += 4
+    score += deen_score
 
-    # ── E) LIFE GOALS — 13 pts ────────────────────────────────────────────────
+    # ── E) LIFE GOALS — 13 pts ──────────────────────────────────────
     if req_prefs.get("children") and req_prefs["children"] == cand_prefs.get("children"):
-        score += 5
+        life_goals_score += 5
     if req_prefs.get("waliInvolvement") and req_prefs["waliInvolvement"] == cand_prefs.get("waliInvolvement"):
-        score += 4
+        life_goals_score += 4
     if req_prefs.get("parentingApproach") and req_prefs["parentingApproach"] == cand_prefs.get("parentingApproach"):
-        score += 2
+        life_goals_score += 2
     if req_prefs.get("familyCloseness") and req_prefs["familyCloseness"] == cand_prefs.get("familyCloseness"):
-        score += 2
+        life_goals_score += 2
+    score += life_goals_score
 
-    # ── F) PRACTICAL — 7 pts ─────────────────────────────────────────────────
+    # ── F) PRACTICAL — 7 pts ────────────────────────────────────────
     if req_prefs.get("livingArrangement") and req_prefs["livingArrangement"] == cand_prefs.get("livingArrangement"):
-        score += 3
+        practical_score += 3
     if req_prefs.get("relocation") and req_prefs["relocation"] == cand_prefs.get("relocation"):
-        score += 2
+        practical_score += 2
     if req_prefs.get("priorMarriage") and req_prefs["priorMarriage"] == cand_prefs.get("priorMarriage"):
-        score += 1
+        practical_score += 1
     cand_age = cand_profile.get("age")
     age_min  = req_prefs.get("ageMin")
     age_max  = req_prefs.get("ageMax")
     if cand_age is not None and age_min is not None and age_max is not None:
         if age_min <= cand_age <= age_max:
-            score += 1
+            practical_score += 1
+    score += practical_score
 
-    # ── G) HARD DEALBREAKERS ─────────────────────────────────────────────────
+    # ── G) HARD DEALBREAKERS ────────────────────────────────────────
     hard_lines = set(req_prefs.get("hardLines") or [])
     if cand_tradition and cand_tradition in hard_lines:
-        return 0
+        return 0, {"niyyah": 0, "values": 0, "mirror": 0,
+                   "deen": 0, "life_goals": 0, "practical": 0}
     if cand_values.get("lifeStage") and cand_values["lifeStage"] in hard_lines:
-        return 0
+        return 0, {"niyyah": 0, "values": 0, "mirror": 0,
+                   "deen": 0, "life_goals": 0, "practical": 0}
 
-    return score
+    return score, {
+        "niyyah":      niyyah_score,
+        "values":      values_score,
+        "mirror":      mirror_score,
+        "deen":        deen_score,
+        "life_goals":  life_goals_score,
+        "practical":   practical_score,
+    }
 
 
 def get_pool(uid: str, db) -> list[dict]:
@@ -122,7 +143,7 @@ def get_pool(uid: str, db) -> list[dict]:
     # -- Requester --
     requester_profile = (db.collection("sakinah_profiles").document(uid).get().to_dict()) or {}
     requester_gender  = requester_profile.get("gender", "")
-    opposite_gender   = "female" if requester_gender == "male" else "male"
+    opposite_gender   = "female" if requester_gender.lower() == "male" else "male"
 
     requester_user = (db.collection("users").document(uid).get().to_dict()) or {}
 
@@ -152,6 +173,9 @@ def get_pool(uid: str, db) -> list[dict]:
 
     for doc in candidates_raw:
         data = doc.to_dict()
+        stored_gender = (data.get("gender") or "").lower()
+        if stored_gender != opposite_gender:
+            continue
         candidate_uid = data.get("uid")
 
         if not candidate_uid or candidate_uid == uid:
@@ -169,10 +193,11 @@ def get_pool(uid: str, db) -> list[dict]:
 
         cand_user = (db.collection("users").document(candidate_uid).get().to_dict()) or {}
 
-        score   = _score_candidate(requester_user, cand_user, data)
+        score, breakdown = _score_candidate(requester_user, cand_user, data)
         stripped = _strip_profile(data)
         stripped["uid"] = candidate_uid
         stripped["compatibility_score"] = score
+        stripped["score_breakdown"] = breakdown
         scored.append(stripped)
 
     scored.sort(key=lambda x: x["compatibility_score"], reverse=True)

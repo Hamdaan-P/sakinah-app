@@ -40,8 +40,8 @@ class MirrorPayload(BaseModel):
 class PreferencesPayload(BaseModel):
     ageMin: int
     ageMax: int
-    heightImportant: bool
-    heightCm: int
+    heightMin: int
+    heightMax: int
     build: Optional[str] = ""
     priorMarriage: str
     childrenFromPrev: str
