@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 import os
 
@@ -8,6 +9,8 @@ from routers import pool, interest, match, conversation, decision, safety, kyc, 
 load_dotenv()
 
 app = FastAPI(title="Sakinah Backend")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,

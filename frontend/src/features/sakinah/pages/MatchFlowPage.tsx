@@ -12,6 +12,9 @@ import { SakinahSidebar } from './components/SakinahSidebar';
 import { WatermarkedPhoto } from '../components/WatermarkedPhoto';
 import '../sakinah.css';
 import { getAuth } from 'firebase/auth';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { db } from '../../../config/firebase.config';
+import { signalReady } from '../services/sakinahService';
 
 const PAGE_BG =
   'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), #07090f';
@@ -65,6 +68,8 @@ export function MatchFlowPage() {
   const [matchGender, setMatchGender] = useState('');
   const [iExpressedInterest, setIExpressedInterest] = useState(false);
   const [loadingMatch, setLoadingMatch] = useState(true);
+  const [iAmReady, setIAmReady] = useState(false);
+  const [otherPersonReady, setOtherPersonReady] = useState(false);
 
   useEffect(() => {
     if (!matchId) return;
@@ -118,6 +123,31 @@ export function MatchFlowPage() {
     };
     fetchPhoto();
   }, [mutualYes, matchId]);
+
+  useEffect(() => {
+    if (!matchId || !mutualYes) return;
+    const currentUid = getAuth().currentUser?.uid;
+    const unsub = onSnapshot(
+      doc(db, 'sakinah_matches', matchId),
+      (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        const isUserA = data.user_a_uid === currentUid;
+        const myReady = isUserA
+          ? data.user_a_ready_next === true
+          : data.user_b_ready_next === true;
+        const theirReady = isUserA
+          ? data.user_b_ready_next === true
+          : data.user_a_ready_next === true;
+        if (myReady && theirReady) {
+          navigate(`/sakinah/conversation/${matchId}`);
+        } else if (theirReady && !myReady) {
+          setOtherPersonReady(true);
+        }
+      }
+    );
+    return () => unsub();
+  }, [matchId, mutualYes]);
 
   const rayaMessage = mutualYes
     ? "Character was seen before the face. This is how it was always meant to begin."
@@ -392,27 +422,82 @@ export function MatchFlowPage() {
                     </div>
                   </div>
                 )}
-                <button
-                  onClick={() => navigate(`/sakinah/conversation/${matchId}`)}
-                  className="sk-btn-gold"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'center',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: "'Manrope', sans-serif",
-                    fontWeight: 600,
-                    fontSize: 14,
-                    letterSpacing: '0.3px',
-                    padding: 15,
-                    borderRadius: 15,
-                    background: 'linear-gradient(135deg, #D4A853, #b98b39)',
-                    color: '#0a0e15',
-                  }}
-                >
-                  Begin the conversation →
-                </button>
+                {!iAmReady ? (
+                  <div>
+                    {otherPersonReady && (
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '16px 20px',
+                        marginBottom: '16px',
+                        border: '1px solid rgba(212,168,83,0.5)',
+                        borderRadius: '16px',
+                        background: 'rgba(212,168,83,0.08)'
+                      }}>
+                        <p style={{
+                          fontFamily: 'Cormorant Garamond, serif',
+                          fontSize: '17px',
+                          color: '#D4A853',
+                          marginBottom: '6px'
+                        }}>
+                          {matchName} is ready to begin this conversation.
+                        </p>
+                        <p style={{
+                          fontSize: '12px',
+                          color: '#9aa0ac',
+                          fontWeight: 300
+                        }}>
+                          Take your time — confirm when you feel ready.
+                        </p>
+                      </div>
+                    )}
+                    <button
+                      onClick={async () => {
+                        if (!matchId) return;
+                        try {
+                          await signalReady(matchId);
+                          setIAmReady(true);
+                        } catch (err) {
+                          console.error('signal-ready failed', err);
+                        }
+                      }}
+                      className="sk-btn-gold"
+                      style={{
+                        display: 'block', width: '100%',
+                        background: 'linear-gradient(135deg, #D4A853, #b98b39)',
+                        color: '#0a0e15', border: 'none',
+                        borderRadius: '14px', padding: '16px',
+                        fontSize: '15px', fontWeight: 600,
+                        cursor: 'pointer', marginTop: '8px'
+                      }}
+                    >
+                      {otherPersonReady
+                        ? `Yes, I am ready →`
+                        : `Begin the conversation →`}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{
+                    textAlign: 'center', marginTop: '24px',
+                    padding: '20px',
+                    border: '1px solid rgba(212,168,83,0.3)',
+                    borderRadius: '16px',
+                    background: 'rgba(212,168,83,0.05)'
+                  }}>
+                    <div style={{ fontSize: '24px', marginBottom: '12px' }}>⏳</div>
+                    <p style={{
+                      fontFamily: 'Cormorant Garamond, serif',
+                      fontSize: '18px', color: '#EDE7DA',
+                      marginBottom: '8px'
+                    }}>
+                      Waiting for {matchName} to confirm they are ready…
+                    </p>
+                    <p style={{
+                      fontSize: '12px', color: '#9aa0ac', fontWeight: 300
+                    }}>
+                      A conversation begins only when both of you are ready.
+                    </p>
+                  </div>
+                )}
                 </>
               ) : (
                 <>

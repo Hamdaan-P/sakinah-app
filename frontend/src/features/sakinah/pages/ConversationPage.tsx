@@ -206,7 +206,7 @@ export function ConversationPage() {
       if (snap.exists()) {
         const data = snap.data();
         setUserRole(data.role || data.sakinah_role || null);
-        setUserGender(data.gender || null);
+        setUserGender(data.gender?.toLowerCase() || null);
         setLinkedWaliUid(data.wali_uid || null);
       }
       setRoleLoaded(true);
@@ -905,6 +905,109 @@ export function ConversationPage() {
             </AnimatePresence>
 
 
+            {/* Invite Wali to observe — female seekers only */}
+            {userGender === 'female' && isWali === false && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <button
+                    onClick={handleInviteWaliToObserve}
+                    disabled={waliObserveInviteSent}
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(212,168,83,0.15), rgba(212,168,83,0.05))',
+                      border: '1px solid rgba(212,168,83,0.6)',
+                      borderRadius: '12px',
+                      padding: '12px 20px',
+                      color: '#D4A853',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      width: '100%',
+                      marginBottom: '16px',
+                      letterSpacing: '0.02em'
+                    }}
+                  >
+                    {waliObserveInviteSent ? 'Wali invited ✓' : 'Invite your Wali to observe 👁️'}
+                  </button>
+                </div>
+
+                {waliObserveSearchOpen && !waliObserveInviteSent && (
+                  <div style={{ marginTop: 8 }}>
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Type your Wali's name..."
+                      value={waliObserveSearchQuery}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setWaliObserveSearchQuery(v);
+                        if (waliObserveDebounceRef.current) clearTimeout(waliObserveDebounceRef.current);
+                        waliObserveDebounceRef.current = setTimeout(async () => {
+                          if (v.length < 2) { setWaliObserveSearchResults([]); return; }
+                          setWaliObserveSearching(true);
+                          try {
+                            const res: any = await searchWaliUser(v);
+                            setWaliObserveSearchResults(res.walis || []);
+                          } catch (err) {
+                            console.error(err);
+                          } finally {
+                            setWaliObserveSearching(false);
+                          }
+                        }, 400);
+                      }}
+                      style={{
+                        width: '100%',
+                        background: 'rgba(255,255,255,.04)',
+                        border: '1px solid rgba(212,168,83,.22)',
+                        borderRadius: 10,
+                        padding: '8px 12px',
+                        color: '#EDE7DA',
+                        fontFamily: "'Manrope', sans-serif",
+                        fontSize: 12,
+                        boxSizing: 'border-box' as const,
+                        outline: 'none',
+                      }}
+                    />
+                    {waliObserveSearching && (
+                      <p style={{
+                        fontSize: 10.5, color: '#5f6675', margin: '4px 0 0',
+                        fontFamily: "'Manrope', sans-serif",
+                      }}>
+                        Searching...
+                      </p>
+                    )}
+                    {waliObserveSearchResults.map(r => (
+                      <div
+                        key={r.wali_uid}
+                        onClick={() => handleObserveWaliSelect(r.wali_uid)}
+                        style={{
+                          padding: '8px 12px',
+                          marginTop: 4,
+                          borderRadius: 8,
+                          background: 'rgba(212,168,83,.06)',
+                          border: '1px solid rgba(212,168,83,.15)',
+                          color: '#EDE7DA',
+                          fontFamily: "'Manrope', sans-serif",
+                          fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {r.wali_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {waliObserveMsg && (
+                  <p style={{
+                    fontSize: 10.5, color: '#5f6675', margin: '4px 0 0', textAlign: 'center',
+                    fontFamily: "'Manrope', sans-serif", lineHeight: 1.4,
+                  }}>
+                    {waliObserveMsg}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* ── Wali toggle ──────────────────────────────────────────── */}
             {/* ── Topic curriculum ──────────────────────────────────────── */}
             {isWali !== true && <motion.div
@@ -1436,106 +1539,6 @@ export function ConversationPage() {
                 <span style={{ color: 'rgba(212,168,83,.22)', letterSpacing: '-0.02em' }}>———</span>
               </button>
             </div>}
-
-            {/* Invite Wali to observe — female seekers only */}
-            {userGender === 'female' && isWali === false && (
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ textAlign: 'center' }}>
-                  <button
-                    onClick={handleInviteWaliToObserve}
-                    disabled={waliObserveInviteSent}
-                    style={{
-                      background: 'none', border: 'none', padding: 0,
-                      fontFamily: "'Cormorant Garamond', serif",
-                      fontStyle: 'italic', fontSize: 11.5,
-                      color: waliObserveInviteSent
-                        ? 'rgba(127,176,122,.6)'
-                        : 'rgba(212,168,83,.45)',
-                      cursor: waliObserveInviteSent ? 'default' : 'pointer',
-                      letterSpacing: '0.02em',
-                    }}
-                  >
-                    {waliObserveInviteSent ? 'Wali invited ✓' : 'Invite your Wali to observe 👁️'}
-                  </button>
-                </div>
-
-                {waliObserveSearchOpen && !waliObserveInviteSent && (
-                  <div style={{ marginTop: 8 }}>
-                    <input
-                      autoFocus
-                      type="text"
-                      placeholder="Type your Wali's name..."
-                      value={waliObserveSearchQuery}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setWaliObserveSearchQuery(v);
-                        if (waliObserveDebounceRef.current) clearTimeout(waliObserveDebounceRef.current);
-                        waliObserveDebounceRef.current = setTimeout(async () => {
-                          if (v.length < 2) { setWaliObserveSearchResults([]); return; }
-                          setWaliObserveSearching(true);
-                          try {
-                            const res: any = await searchWaliUser(v);
-                            setWaliObserveSearchResults(res.walis || []);
-                          } catch (err) {
-                            console.error(err);
-                          } finally {
-                            setWaliObserveSearching(false);
-                          }
-                        }, 400);
-                      }}
-                      style={{
-                        width: '100%',
-                        background: 'rgba(255,255,255,.04)',
-                        border: '1px solid rgba(212,168,83,.22)',
-                        borderRadius: 10,
-                        padding: '8px 12px',
-                        color: '#EDE7DA',
-                        fontFamily: "'Manrope', sans-serif",
-                        fontSize: 12,
-                        boxSizing: 'border-box' as const,
-                        outline: 'none',
-                      }}
-                    />
-                    {waliObserveSearching && (
-                      <p style={{
-                        fontSize: 10.5, color: '#5f6675', margin: '4px 0 0',
-                        fontFamily: "'Manrope', sans-serif",
-                      }}>
-                        Searching...
-                      </p>
-                    )}
-                    {waliObserveSearchResults.map(r => (
-                      <div
-                        key={r.wali_uid}
-                        onClick={() => handleObserveWaliSelect(r.wali_uid)}
-                        style={{
-                          padding: '8px 12px',
-                          marginTop: 4,
-                          borderRadius: 8,
-                          background: 'rgba(212,168,83,.06)',
-                          border: '1px solid rgba(212,168,83,.15)',
-                          color: '#EDE7DA',
-                          fontFamily: "'Manrope', sans-serif",
-                          fontSize: 12,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {r.wali_name}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {waliObserveMsg && (
-                  <p style={{
-                    fontSize: 10.5, color: '#5f6675', margin: '4px 0 0', textAlign: 'center',
-                    fontFamily: "'Manrope', sans-serif", lineHeight: 1.4,
-                  }}>
-                    {waliObserveMsg}
-                  </p>
-                )}
-              </div>
-            )}
 
             {/* Input row — hidden for wali observers */}
             {isWali === false && <div

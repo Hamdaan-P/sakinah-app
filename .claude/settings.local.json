@@ -24,7 +24,10 @@
       "PowerShell(Remove-Item \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\\\\firestore_helpers.py\" -Force; if \\(-not \\(Test-Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\\\\firestore_helpers.py\"\\)\\) { \"DELETED: firestore_helpers.py\" } else { \"FAILED: still exists\" })",
       "PowerShell(Remove-Item \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\services\\\\auth.py\" -Force; if \\(-not \\(Test-Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\services\\\\auth.py\"\\)\\) { \"DELETED: auth.py\" } else { \"FAILED: still exists\" })",
       "PowerShell(Remove-Item \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\\\\__init__.py\" -Force; if \\(-not \\(Test-Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\\\\__init__.py\"\\)\\) { \"DELETED: utils/__init__.py\" } else { \"FAILED: still exists\" })",
-      "PowerShell(Remove-Item \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\" -Force; if \\(-not \\(Test-Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\"\\)\\) { \"DELETED: utils/ folder\" } else { \"FAILED: folder still exists\" })"
+      "PowerShell(Remove-Item \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\" -Force; if \\(-not \\(Test-Path \"D:\\\\Projects\\\\sakinah-handoff\\\\sakinah-backend\\\\utils\"\\)\\) { \"DELETED: utils/ folder\" } else { \"FAILED: folder still exists\" })",
+      "Bash(python -)",
+      "Bash(python -c \"import json; d=json.load\\(open\\('D:/Projects/sakinah-handoff/sakinah-backend/serviceAccountKey.json'\\)\\); print\\('project_id:', d.get\\('project_id'\\)\\)\")",
+      "Bash(python -c \"import PIL; print\\(PIL.__version__\\)\")"
     ]
   }
 }
