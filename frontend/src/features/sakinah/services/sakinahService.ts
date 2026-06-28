@@ -136,11 +136,21 @@ export async function initiateKyc() {
   return authPost('/kyc/initiate', {});
 }
 
-export async function submitKyc(sessionId: string, idDocumentBase64: string, selfieBase64: string) {
+export async function submitKyc(
+  sessionId: string,
+  idDocumentBase64: string,
+  selfieBase64: string,
+  gender: string = '',
+  age: number = 0,
+  displayName: string = '',
+) {
   return authPost('/kyc/submit', {
     session_id: sessionId,
     id_document_base64: idDocumentBase64,
     selfie_base64: selfieBase64,
+    gender,
+    age,
+    display_name: displayName,
   });
 }
 

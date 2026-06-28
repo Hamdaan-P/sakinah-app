@@ -199,6 +199,28 @@ export const useKycStore = create<KycState & KycActions>((set, get) => ({
         updated_at: serverTimestamp(),
       }, { merge: true });
 
+      // Mirror gender, name and age into sakinah_profiles for Sakinah pool matching
+      try {
+        const { getDoc, doc: firestoreDoc, setDoc: firestoreSet } = await import('firebase/firestore');
+        const sakinahProfileRef = firestoreDoc(db, 'sakinah_profiles', userId);
+        const sakinahSnap = await getDoc(sakinahProfileRef);
+        if (sakinahSnap.exists()) {
+          const birthYear = data.date_of_birth
+            ? new Date(data.date_of_birth).getFullYear()
+            : null;
+          const age = birthYear
+            ? new Date().getFullYear() - birthYear
+            : 0;
+          await firestoreSet(sakinahProfileRef, {
+            gender: data.gender.toLowerCase(),
+            display_name: data.full_name,
+            age: age,
+          }, { merge: true });
+        }
+      } catch (e) {
+        console.warn('sakinah_profiles gender sync skipped:', e);
+      }
+
       // Trigger one-time referral reward for the inviter after successful onboarding.
       try {
         await claimReferralOnboardingReward(userId);

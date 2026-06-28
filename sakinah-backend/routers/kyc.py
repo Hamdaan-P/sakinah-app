@@ -11,6 +11,9 @@ class KYCSubmitRequest(BaseModel):
     session_id: str
     id_document_base64: str
     selfie_base64: str
+    gender: str = ""
+    age: int = 0
+    display_name: str = ""
 
 
 @router.post("/initiate")
@@ -30,7 +33,8 @@ async def submit_kyc(
     uid = decoded_token["uid"]
     db = get_firestore_client()
     return await kyc_service.submit_kyc(
-        uid, body.session_id, body.id_document_base64, body.selfie_base64, db
+        uid, body.session_id, body.id_document_base64, body.selfie_base64, db,
+        gender=body.gender, age=body.age, display_name=body.display_name,
     )
 
 

@@ -29,6 +29,9 @@ async def submit_kyc(
     id_document_base64: str,
     selfie_base64: str,
     db,
+    gender: str = "",
+    age: int = 0,
+    display_name: str = "",
 ) -> dict:
     DEV_BYPASS = os.getenv("KYC_DEV_BYPASS", "false").lower() == "true"
     if DEV_BYPASS:
@@ -38,9 +41,10 @@ async def submit_kyc(
             "kyc_tier": 2,
             "kycTier": 2,
             "uid": uid,
-            "gender": "",
-            "age": 0,
-            "kyc_data": {"name": "Dev Bypass", "age": 0, "gender": ""},
+            "gender": gender.lower() if gender else "",
+            "age": age,
+            "display_name": display_name,
+            "kyc_data": {"name": display_name or "Dev Bypass", "age": age, "gender": gender.lower() if gender else ""},
         }, merge=True)
         db.collection("sakinah_safety").document(session_id).update(
             {"status": "approved"}

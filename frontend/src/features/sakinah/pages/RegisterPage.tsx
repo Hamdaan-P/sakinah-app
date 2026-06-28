@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAuth, signInWithPhoneNumber, signInWithEmailAndPassword, RecaptchaVerifier } from 'firebase/auth';
+import { getAuth, signInWithPhoneNumber, linkWithPhoneNumber, signInWithEmailAndPassword, RecaptchaVerifier } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase.config';
 import { SakinahSidebar } from './components/SakinahSidebar';
@@ -15,11 +15,12 @@ import { initiateKyc, submitKyc } from '../services/sakinahService';
 const PAGE_BG = 'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), #07090f';
 
 const STEP_META = [
-  { title: "Let's verify you",    sub: 'So this stays a safe, real space · Phase A · Arrival',      side: 'kyc'      },
-  { title: 'Enter the code',      sub: 'Confirm your phone · Phase A · Arrival',                     side: 'kyc'      },
-  { title: 'One quick look',      sub: 'Liveness check · stays private · Phase A · Arrival',         side: 'liveness' },
-  { title: 'Verify your identity',sub: 'Government ID · Phase A · Arrival',                          side: 'kyc'      },
-  { title: "You're verified",     sub: 'Identity confirmed · Phase A · Arrival',                     side: 'kyc'      },
+  { title: "Let's verify you",    sub: 'So this stays a safe, real space · Phase A · Arrival',          side: 'kyc'      },
+  { title: 'Enter the code',      sub: 'Confirm your phone · Phase A · Arrival',                        side: 'kyc'      },
+  { title: 'A little about you',  sub: 'So your profile is complete from the start · Phase A · Arrival',side: 'kyc'      },
+  { title: 'One quick look',      sub: 'Liveness check · stays private · Phase A · Arrival',            side: 'liveness' },
+  { title: 'Verify your identity',sub: 'Government ID · Phase A · Arrival',                             side: 'kyc'      },
+  { title: "You're verified",     sub: 'Identity confirmed · Phase A · Arrival',                        side: 'kyc'      },
 ];
 
 const ID_TYPES = ['Aadhaar · DigiLocker', 'Passport', 'PAN', 'Voter ID'];
@@ -67,6 +68,8 @@ export function RegisterPage() {
   const [shakingId, setShakingId]     = useState<string | null>(null);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [kycSessionId, setKycSessionId] = useState<string>('');
+  const [gender, setGender]             = useState('');
+  const [userAge, setUserAge]           = useState<number | ''>('');
 
   const videoRef              = useRef<HTMLVideoElement>(null);
   const streamRef             = useRef<MediaStream | null>(null);
@@ -79,9 +82,9 @@ export function RegisterPage() {
 
   // ── Navigation ───────────────────────────────────────────────────────────
   function goTo(n: number) {
-    if (step === 3 && n !== 3) stopCamera();
+    if (step === 4 && n !== 4) stopCamera();
     setStep(n);
-    if (n === 3) startCamera();
+    if (n === 4) startCamera();
   }
   function prevStep() { if (step > 1) goTo(step - 1); }
 
@@ -139,7 +142,13 @@ export function RegisterPage() {
       }
 
       const fullPhone = phone.startsWith('+') ? phone : `+91${phone}`;
-      const result = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifierRef.current);
+      const currentUser = auth.currentUser;
+      let result;
+      if (currentUser) {
+        result = await linkWithPhoneNumber(currentUser, fullPhone, recaptchaVerifierRef.current);
+      } else {
+        result = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifierRef.current);
+      }
       setConfirmationResult(result);
       const raw = phone.replace(/\D/g, '');
       const masked = '+91 ' + raw.slice(0, 5).replace(/./g, '•') + ' ••' + raw.slice(-3);
@@ -265,10 +274,10 @@ export function RegisterPage() {
     startCamera();
   }
 
-  // Auto-start camera when entering step 3, stop when leaving
+  // Auto-start camera when entering step 4, stop when leaving
   useEffect(() => {
-    if (step === 3 && camState === 'idle') startCamera();
-    if (step !== 3) stopCamera();
+    if (step === 4 && camState === 'idle') startCamera();
+    if (step !== 4) stopCamera();
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup on unmount
@@ -321,16 +330,17 @@ export function RegisterPage() {
       if (snapUrl && kycSessionId) {
         const selfieBase64 = snapUrl.split(',')[1];
         const idBase64 = selfieBase64; // use selfie as placeholder for ID doc in dev
-        await submitKyc(kycSessionId, idBase64, selfieBase64);
+        const displayName = getAuth().currentUser?.displayName || '';
+        await submitKyc(kycSessionId, idBase64, selfieBase64, gender, typeof userAge === 'number' ? userAge : 0, displayName);
       }
       const uid = getAuth().currentUser?.uid;
       if (uid && city.trim()) {
         await setDoc(doc(db, 'sakinah_profiles', uid), { city: city.trim(), uid }, { merge: true });
       }
-      goTo(5);
+      goTo(6);
     } catch (e) {
       console.error('KYC submit failed:', e);
-      goTo(5); // proceed anyway in dev mode
+      goTo(6); // proceed anyway in dev mode
     }
   };
 
@@ -339,14 +349,15 @@ export function RegisterPage() {
     const nodes = [
       { num: 1, label: 'Phone'    },
       { num: 2, label: 'OTP'      },
-      { num: 3, label: 'Selfie'   },
-      { num: 4, label: 'Identity' },
+      { num: 3, label: 'Profile'  },
+      { num: 4, label: 'Selfie'   },
+      { num: 5, label: 'Identity' },
     ];
     return (
       <div className="flex items-start" style={{ maxWidth: 500 }}>
         {nodes.map((node, i) => {
-          const done   = step === 5 || node.num < step;
-          const active = node.num === step && step < 5;
+          const done   = step === 6 || node.num < step;
+          const active = node.num === step && step < 6;
           return (
             <div key={node.num} className="flex items-start">
               <div className="flex flex-col items-center" style={{ gap: 7, flexShrink: 0 }}>
@@ -371,7 +382,7 @@ export function RegisterPage() {
               {i < nodes.length - 1 && (
                 <div style={{
                   flex: 1, height: 1.5, marginTop: 14, minWidth: 44,
-                  background: node.num < step || step === 5 ? 'rgba(212,168,83,.55)' : 'rgba(255,255,255,.06)',
+                  background: node.num < step || step === 6 ? 'rgba(212,168,83,.55)' : 'rgba(255,255,255,.06)',
                   transition: 'background 0.3s',
                 }} />
               )}
@@ -510,8 +521,74 @@ export function RegisterPage() {
                 </div>
               )}
 
-              {/* ── Step 3: Selfie / Liveness ── */}
+              {/* ── Step 3: Profile (gender + age) ── */}
               {step === 3 && (
+                <div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontStyle: 'italic', color: '#EDE7DA', lineHeight: 1.35, marginBottom: 6 }}>
+                    A little about you
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#5f6675', fontWeight: 300, marginBottom: 22 }}>
+                    So your profile is complete from the start
+                  </div>
+
+                  <label style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(212,168,83,.55)', display: 'block', marginBottom: 10 }}>
+                    Gender
+                  </label>
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 22 }}>
+                    {(['Male', 'Female'] as const).map(g => (
+                      <button
+                        key={g}
+                        onClick={() => setGender(g.toLowerCase())}
+                        style={{
+                          flex: 1, padding: '14px 0', borderRadius: 13, cursor: 'pointer',
+                          fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 500,
+                          background: 'rgba(255,255,255,.018)', transition: '0.18s',
+                          border: gender === g.toLowerCase()
+                            ? '1.5px solid #D4A853'
+                            : '1px solid rgba(255,255,255,.06)',
+                          color: gender === g.toLowerCase() ? '#e7c984' : '#9aa0ac',
+                        }}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+
+                  <label style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(212,168,83,.55)', display: 'block', marginBottom: 9 }}>
+                    Your age
+                  </label>
+                  <div style={{ display: 'flex', border: '1px solid rgba(255,255,255,.06)', borderRadius: 13, overflow: 'hidden', background: 'rgba(255,255,255,.018)', marginBottom: 22 }}>
+                    <input
+                      type="number" min={18} max={80} placeholder="e.g. 27"
+                      value={userAge}
+                      onChange={e => {
+                        const v = parseInt(e.target.value, 10);
+                        setUserAge(isNaN(v) ? '' : v);
+                      }}
+                      style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', padding: '14px 16px', fontFamily: "'Manrope', sans-serif", fontSize: 14, color: '#EDE7DA', outline: 'none' }}
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => goTo(4)}
+                    disabled={!gender || !userAge}
+                    className="sk-btn-gold"
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'center', border: 'none', cursor: gender && userAge ? 'pointer' : 'not-allowed',
+                      fontFamily: "'Manrope', sans-serif", fontWeight: 600, fontSize: 14, letterSpacing: '0.3px',
+                      padding: 15, borderRadius: 15, marginTop: 6,
+                      background: gender && userAge ? 'linear-gradient(135deg, #D4A853, #b98b39)' : 'rgba(212,168,83,.18)',
+                      color: gender && userAge ? '#0a0e15' : 'rgba(212,168,83,.4)',
+                      transition: '0.2s',
+                    }}
+                  >
+                    Continue →
+                  </button>
+                </div>
+              )}
+
+              {/* ── Step 4: Selfie / Liveness ── */}
+              {step === 4 && (
                 <div>
                   <div
                     className={`sk-camera-frame${camState === 'captured' ? ' sk-cam-captured' : ''}`}
@@ -549,7 +626,7 @@ export function RegisterPage() {
 
                   {camState === 'captured' ? (
                     <>
-                      <GoldBtn onClick={() => goTo(4)}>Continue →</GoldBtn>
+                      <GoldBtn onClick={() => goTo(5)}>Continue →</GoldBtn>
                       <button onClick={retakePhoto} className="sk-btn-ghost" style={{ display: 'block', width: '100%', textAlign: 'center', border: '1px solid rgba(212,168,83,.16)', background: 'transparent', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontWeight: 600, fontSize: 14, padding: 15, borderRadius: 15, marginTop: 8, color: '#e7c984' }}>
                         Retake
                       </button>
@@ -566,8 +643,8 @@ export function RegisterPage() {
                 </div>
               )}
 
-              {/* ── Step 4: Gov ID ── */}
-              {step === 4 && (
+              {/* ── Step 5: Gov ID ── */}
+              {step === 5 && (
                 <div>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontStyle: 'italic', color: '#EDE7DA', lineHeight: 1.35, marginBottom: 12 }}>
                     Government ID — choose one
@@ -624,8 +701,8 @@ export function RegisterPage() {
                 </div>
               )}
 
-              {/* ── Step 5: Verified ── */}
-              {step === 5 && (
+              {/* ── Step 6: Verified ── */}
+              {step === 6 && (
                 <div>
                   <div style={{ textAlign: 'center', padding: '8px 0 22px' }}>
                     <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 48, color: '#D4A853', marginBottom: 8, lineHeight: 1 }}>✓</div>

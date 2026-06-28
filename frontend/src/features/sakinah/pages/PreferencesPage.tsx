@@ -11,6 +11,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SakinahSidebar } from './components/SakinahSidebar';
 import '../sakinah.css';
 import RayaOrbButton from '../components/RayaOrbButton';
+import { getAuth } from 'firebase/auth';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '@/config/firebase.config';
 
 const PAGE_BG =
   'radial-gradient(1200px 800px at 50% -10%, rgba(212,168,83,.07), transparent 60%), #07090f';
@@ -244,12 +247,21 @@ export function PreferencesPage() {
     bodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [section]);
 
+  useEffect(() => {
+    const uid = getAuth().currentUser?.uid;
+    if (!uid) return;
+    getDoc(doc(db, 'sakinah_profiles', uid)).then(snap => {
+      if (snap.exists()) setUserGender((snap.data().gender || '').toLowerCase());
+    }).catch(() => {});
+  }, []);
+
   function set<K extends keyof Prefs>(key: K, value: Prefs[K]) {
     setPrefs(prev => ({ ...prev, [key]: value }));
   }
 
   const [rayaOpen, setRayaOpen] = useState(false);
   const [activeHelp, setActiveHelp] = useState<string | null>(null);
+  const [userGender, setUserGender] = useState('');
   function openRaya() { setActiveHelp(null); setRayaOpen(true); }
   function toggleHelp(id: string) { setActiveHelp(prev => prev === id ? null : id); }
 
@@ -304,7 +316,7 @@ export function PreferencesPage() {
             <Chips options={['Memorised portions', 'Regular recitation', 'Learning', 'Not important']}
               value={prefs.quranRelationship} onChange={v => set('quranRelationship', v)} />
           </Q>
-          <Q label="Hijab & modest dress">
+          <Q label={userGender === 'female' ? 'Modest dress' : 'Hijab & modest dress'}>
             <Chips options={['Important to me', 'Preferred', 'Not important']}
               value={prefs.hijabModestDress} onChange={v => set('hijabModestDress', v)} />
           </Q>
@@ -322,7 +334,10 @@ export function PreferencesPage() {
               value={prefs.educationLevel} onChange={v => set('educationLevel', v)} />
           </Q>
           <Q label="Career">
-            <Chips options={['I prefer she works', 'I prefer she focuses on home', 'Either works for me']}
+            <Chips
+              options={userGender === 'female'
+                ? ['I prefer he works and provides', 'I prefer we both contribute equally', 'Either works for me']
+                : ['I prefer she works', 'I prefer she focuses on home', 'Either works for me']}
               value={prefs.career} onChange={v => set('career', v)} />
           </Q>
           <Q label="Financial stability">

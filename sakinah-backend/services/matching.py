@@ -201,6 +201,8 @@ def get_pool(uid: str, db) -> list[dict]:
         scored.append(stripped)
 
     scored.sort(key=lambda x: x["compatibility_score"], reverse=True)
+    MIN_SCORE_THRESHOLD = 30
+    scored = [c for c in scored if c['compatibility_score'] >= MIN_SCORE_THRESHOLD]
     return scored[:5]
 
 
